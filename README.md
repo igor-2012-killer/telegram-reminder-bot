@@ -36,12 +36,12 @@ An advanced, open-source Telegram bot for setting reminders using natural langua
 
 3.  **Run with Docker**
     ```bash
-    docker-compose up -d
+    docker compose up -d
     ```
 
 4.  **Initialize Database**
     ```bash
-    docker-compose exec bot npx prisma migrate deploy
+    docker compose exec bot npx prisma migrate deploy
     ```
 
 ## Development
