@@ -63,6 +63,9 @@ bot.command('list', async (ctx) => {
         orderBy: { triggerAt: 'asc' }
     });
 
+    const user = await prisma.user.findUnique({ where: { id: BigInt(userId) } });
+    const tz = user?.timezone || 'UTC';
+
     if (reminders.length === 0) {
         await ctx.reply("У вас нет активных напоминаний.");
         return;
@@ -71,8 +74,8 @@ bot.command('list', async (ctx) => {
     await ctx.reply("Ваши напоминания:");
 
     for (const r of reminders) {
-        const date = DateTime.fromJSDate(r.triggerAt).toUTC();
-        let text = `📅 ${date.toFormat('yyyy-MM-dd HH:mm')} UTC\n📝 ${r.message}`;
+        const date = DateTime.fromJSDate(r.triggerAt).setZone(tz);
+        let text = `📅 ${date.toFormat('dd.MM.yyyy HH:mm')}\n📝 ${r.message}`;
         if (r.isRecurring) {
             text += `\n🔄 Повтор: ${r.recurrenceRule}`;
         }
