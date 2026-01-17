@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        BigInt   @id
+  username  String?
+  firstName String?
+  timezone  String?  // IANA timezone string, e.g., "Europe/Moscow"
+  createdAt DateTime @default(now())
+  reminders Reminder[]
+}
+
+model Reminder {
+  id            Int      @id @default(autoincrement())
+  userId        BigInt
+  user          User     @relation(fields: [userId], references: [id])
+  message       String
+  triggerAt     DateTime // UTC time to trigger the reminder
+  originalInput String?  // What the user typed for the date
+  isRecurring   Boolean  @default(false)
+  recurrenceRule String? // Cron or text description if needed later
+  completed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}

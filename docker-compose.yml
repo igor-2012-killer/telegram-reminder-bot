@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    restart: always
+    environment:
+      - DATABASE_URL=file:./dev.db
+      - BOT_TOKEN=${BOT_TOKEN}
+      - NODE_ENV=production
+    volumes:
+      - ./prisma/dev.db:/app/prisma/dev.db
