@@ -9,8 +9,11 @@ import ffmpeg from "fluent-ffmpeg";
 import logger from "../core/logger";
 
 const openai = new OpenAI({
-    apiKey: config.OPENAI_API_KEY,
+    apiKey: config.GROQ_API_KEY || config.OPENAI_API_KEY,
+    baseURL: config.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined,
 });
+
+const WHISPER_MODEL = config.GROQ_API_KEY ? "whisper-large-v3" : "whisper-1";
 
 export class STTService {
     /**
@@ -53,10 +56,10 @@ export class STTService {
                     .save(outputPath);
             });
 
-            // 3. Transcribe with OpenAI
+            // 3. Transcribe
             const transcription = await openai.audio.transcriptions.create({
                 file: fs.createReadStream(outputPath),
-                model: "whisper-1",
+                model: WHISPER_MODEL,
             });
 
             return transcription.text;
