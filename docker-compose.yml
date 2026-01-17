@@ -3,7 +3,7 @@ services:
     build: .
     restart: always
     environment:
-      - DATABASE_URL=file:./dev.db
+      - DATABASE_URL=file:./prisma/dev.db
       - BOT_TOKEN=${BOT_TOKEN}
       - NODE_ENV=production
     volumes:
