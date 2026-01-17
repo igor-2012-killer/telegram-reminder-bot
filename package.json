@@ -28,6 +28,7 @@
     "homepage": "https://github.com/igor-2012-killer/telegram-reminder-bot#readme",
     "dependencies": {
         "@grammyjs/conversations": "^2.1.1",
+        "@grammyjs/ratelimiter": "^1.2.1",
         "@prisma/adapter-better-sqlite3": "^6.0.0",
         "@prisma/client": "^7.2.0",
         "better-sqlite3": "^11.0.0",
