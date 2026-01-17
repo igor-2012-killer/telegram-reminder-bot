@@ -1,4 +1,4 @@
-import { Bot, session } from 'grammy';
+import { Bot, session, InlineKeyboard } from 'grammy';
 import { conversations, createConversation } from "@grammyjs/conversations";
 import { config } from '../core/config';
 import { MyContext, SessionData } from './types';
@@ -20,7 +20,50 @@ bot.command('start', async (ctx) => {
 });
 
 bot.command('help', async (ctx) => {
-    await ctx.reply("Я бот-напоминалка. Просто напиши мне о чем и когда напомнить.\nНапример:\n- Напомни сходить в магазин завтра в 6 вечера\n- 2026-01-21 15:00 Позвонить маме\n- через 20 минут выключить духовку");
+    await ctx.reply("Я бот-напоминалка. Просто напиши мне о чем и когда напомнить.\nНапример:\n- Напомни сходить в магазин завтра в 6 вечера\n- 2026-01-21 15:00 Позвонить маме\n- через 20 минут выключить духовку\n\nКоманды:\n/list - список напоминаний");
+});
+
+bot.command('list', async (ctx) => {
+    const userId = ctx.from?.id;
+    if (!userId) return;
+
+    const reminders = await prisma.reminder.findMany({
+        where: { userId: BigInt(userId), completed: false },
+        orderBy: { triggerAt: 'asc' }
+    });
+
+    if (reminders.length === 0) {
+        await ctx.reply("У вас нет активных напоминаний.");
+        return;
+    }
+
+    await ctx.reply("Ваши напоминания:");
+
+    for (const r of reminders) {
+        const date = DateTime.fromJSDate(r.triggerAt).toUTC();
+        let text = `📅 ${date.toFormat('yyyy-MM-dd HH:mm')} UTC\n📝 ${r.message}`;
+        if (r.isRecurring) {
+            text += `\n🔄 Повтор: ${r.recurrenceRule}`;
+        }
+
+        const keyboard = new InlineKeyboard().text("❌ Удалить", `delete_${r.id}`);
+        await ctx.reply(text, { reply_markup: keyboard });
+    }
+});
+
+// Handle deletion via callback
+bot.callbackQuery(/^delete_(\d+)$/, async (ctx) => {
+    const id = parseInt(ctx.match[1]);
+
+    try {
+        await prisma.reminder.delete({ where: { id } });
+        await ctx.answerCallbackQuery("Напоминание удалено");
+        await ctx.editMessageText(`✅ Напоминание удалено`);
+    } catch (e) {
+        await ctx.answerCallbackQuery("Ошибка удаления");
+        // If it's already deleted or not found
+        await ctx.editMessageText("⚠️ Напоминание не найдено или уже удалено");
+    }
 });
 
 // Text Handler
@@ -45,7 +88,9 @@ bot.on('message:text', async (ctx) => {
                 userId: BigInt(userId),
                 message: result.cleanText,
                 triggerAt: result.date,
-                originalInput: text
+                originalInput: text,
+                isRecurring: result.isRecurring,
+                recurrenceRule: result.recurrenceRule
             }
         });
 

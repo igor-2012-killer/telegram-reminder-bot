@@ -1,7 +1,7 @@
 {
     "name": "telegram-reminder-bot",
     "version": "1.0.0",
-    "description": "",
+    "description": "Telegram bot for smart reminders with natural language support",
     "main": "dist/index.js",
     "scripts": {
         "build": "tsc",
@@ -9,9 +9,23 @@
         "dev": "nodemon src/index.ts",
         "migrate": "prisma migrate deploy"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/igor-2012-killer/telegram-reminder-bot.git"
+    },
+    "keywords": [
+        "telegram",
+        "bot",
+        "reminder",
+        "typescript",
+        "grammy"
+    ],
+    "author": "igor-2012-killer",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/igor-2012-killer/telegram-reminder-bot/issues"
+    },
+    "homepage": "https://github.com/igor-2012-killer/telegram-reminder-bot#readme",
     "dependencies": {
         "@grammyjs/conversations": "^1.2.0",
         "@prisma/client": "^5.9.0",

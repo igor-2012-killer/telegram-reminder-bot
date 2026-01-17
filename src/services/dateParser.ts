@@ -6,6 +6,8 @@ interface ParseResult {
     hasTimezone: boolean;
     timezoneUsed: string;
     cleanText: string;
+    isRecurring: boolean;
+    recurrenceRule?: string;
 }
 
 export class DateParser {
@@ -96,11 +98,28 @@ export class DateParser {
             }, { zone: userTimezone });
         }
 
+        // Simple recurring detection
+        // We look for patterns like "every day", "каждый день", "every week", "каждую неделю".
+        // This is very basic.
+        let isRecurring = false;
+        let recurrenceRule: string | undefined = undefined;
+
+        const lowerText = text.toLowerCase();
+        if (lowerText.includes('every day') || lowerText.includes('каждый день')) {
+            isRecurring = true;
+            recurrenceRule = 'daily';
+        } else if (lowerText.includes('every week') || lowerText.includes('каждую неделю')) {
+            isRecurring = true;
+            recurrenceRule = 'weekly';
+        }
+
         return {
             date: finalDate.toJSDate(),
             hasTimezone,
             timezoneUsed,
-            cleanText: cleanText || "Напоминание" // Default text if empty
+            cleanText: cleanText || "Напоминание",
+            isRecurring,
+            recurrenceRule
         };
     }
 }
