@@ -55,6 +55,11 @@ export async function askTimezone(conversation: Conversation<MyContext, Context 
     while (true) {
         const { message } = await conversation.wait();
 
+        if (message?.text === '/cancel') {
+            await ctx.reply("Действие отменено. Новые напоминания будут создаваться с прежним часовым поясом (если он был настроен).");
+            return;
+        }
+
         if (message?.text) {
             const rawInput = message.text;
             const timezone = normalizeTimezone(rawInput);
