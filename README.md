@@ -1,67 +1,70 @@
 # Telegram Reminder Bot
 
-An advanced, open-source Telegram bot for setting reminders using natural language. Built with Node.js, TypeScript, and Docker.
+[English version](README.en.md)
+
+Продвинутый Open Source Telegram-бот для создания напоминаний на естественном языке. Создан с использованием Node.js, TypeScript и Docker.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![TypeScript](https://img.shields.io/badge/language-TypeScript-blue)
 ![Docker](https://img.shields.io/badge/docker-ready-green)
 
-## Features
+## Основные возможности
 
--   **Natural Language Parsing**: "Remind me to call mom in 10 minutes", "Завтра в 15:00 сходить в магазин".
--   **Timezone Awareness**: Automatically handles user timezones (asks on first start).
--   **Recurrence**: Supports "every day" and "every week" reminders.
--   **Management**: List and delete reminders with an interactive UI.
--   **Modern Stack**: Node.js 22, TypeScript, grammY, Prisma (SQLite).
+-   **Понимание естественной речи**: Поддерживает фразы вроде "напомни позвонить маме через 10 минут", "завтра в 15:00 сходить в магазин", "каждый понедельник уборка".
+-   **Умные часовые пояса**: Бот автоматически запрашивает часовой пояс при первом запуске и нормализует ввод (понимает "Moscow", "Msk", "London" и т.д.).
+-   **Повторяющиеся задачи**: Поддержка напоминаний "каждый день" или "каждую неделю".
+-   **Удобное управление**: Просмотр списка напоминаний командой `/list` и удаление кнопками.
+-   **Современный стек**: Node.js 22 (Debian Slim), TypeScript, grammY, Prisma (SQLite).
 
-## Requirements
+## Требования
 
--   Docker & Docker Compose
--   Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
+-   Docker и Docker Compose
+-   Токен Telegram бота (от [@BotFather](https://t.me/BotFather))
 
-## Quick Start
+## Быстрый старт
 
-1.  **Clone the repository**
+1.  **Клонируйте репозиторий**
     ```bash
     git clone https://github.com/igor-2012-killer/telegram-reminder-bot.git
     cd telegram-reminder-bot
     ```
 
-2.  **Configure environment**
-    Copy the example configuration:
+2.  **Настройте окружение**
+    Скопируйте пример файла конфигурации:
     ```bash
     cp .env.example .env
     ```
-    Edit `.env` and paste your `BOT_TOKEN`.
+    Отредактируйте `.env` и вставьте ваш `BOT_TOKEN`.
 
-3.  **Run with Docker**
+3.  **Запуск через Docker**
     ```bash
     docker compose up -d
     ```
 
-4.  **Initialize Database**
+4.  **Развертывание базы данных**
+    При первом запуске выполните миграцию:
     ```bash
     docker compose exec bot npx prisma migrate deploy
     ```
 
-## Development
+## Разработка
 
-1.  Install dependencies:
+1.  Установите зависимости:
     ```bash
     npm install
     ```
-2.  Run in development mode:
+2.  Запустите в режиме разработки:
     ```bash
     npm run dev
     ```
 
-## Stack
+## Технологии
 
 -   **Framework**: [grammY](https://grammy.dev/)
 -   **Database**: SQLite via [Prisma](https://www.prisma.io/)
--   **Date Parsing**: [chrono-node](https://github.com/wanasit/chrono)
+-   **Date Parsing**: [chrono-node](https://github.com/wanasit/chrono) (с поддержкой RU локали)
 -   **Time Handling**: [Luxon](https://moment.github.io/luxon/)
 
-## License
+## Лицензия
 
 MIT
