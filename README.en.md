@@ -4,6 +4,9 @@
 
 An advanced, open-source Telegram bot for setting reminders using natural language. Built with Node.js, TypeScript, and Docker.
 
+🚀 **Try it out:** [@remind_hint_bot](https://t.me/remind_hint_bot)
+
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![TypeScript](https://img.shields.io/badge/language-TypeScript-blue)
 ![Docker](https://img.shields.io/badge/docker-ready-green)

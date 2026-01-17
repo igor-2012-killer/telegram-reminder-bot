@@ -4,6 +4,9 @@
 
 Продвинутый Open Source Telegram-бот для создания напоминаний на естественном языке. Создан с использованием Node.js, TypeScript и Docker.
 
+🚀 **Попробовать бота:** [@remind_hint_bot](https://t.me/remind_hint_bot)
+
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![TypeScript](https://img.shields.io/badge/language-TypeScript-blue)
 ![Docker](https://img.shields.io/badge/docker-ready-green)
