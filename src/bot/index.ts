@@ -3,6 +3,7 @@ import { conversations, createConversation } from "@grammyjs/conversations";
 import { config } from '../core/config';
 import { MyContext, SessionData } from './types';
 import { askTimezone } from './conversations/timezone';
+import { editReminder } from './conversations/editReminder';
 import { prisma } from '../core/prisma';
 import { DateParser } from '../services/dateParser';
 import { DateTime } from 'luxon';
@@ -14,6 +15,7 @@ export const bot = new Bot<MyContext>(config.BOT_TOKEN);
 bot.use(session({ initial: (): SessionData => ({ isAwaitingTimezone: false }) }));
 bot.use(conversations());
 bot.use(createConversation<MyContext, Context & SessionFlavor<SessionData>>(askTimezone));
+bot.use(createConversation<MyContext, Context & SessionFlavor<SessionData>>(editReminder));
 
 // Error handling
 bot.catch((err) => {
@@ -75,7 +77,9 @@ bot.command('list', async (ctx) => {
             text += `\n🔄 Повтор: ${r.recurrenceRule}`;
         }
 
-        const keyboard = new InlineKeyboard().text("❌ Удалить", `delete_${r.id}`);
+        const keyboard = new InlineKeyboard()
+            .text("❌ Удалить", `delete_${r.id}`)
+            .text("📝 Изменить", `edit_${r.id}`);
         await ctx.reply(text, { reply_markup: keyboard });
     }
 });
@@ -131,6 +135,10 @@ bot.callbackQuery(/^done_(\d+)$/, async (ctx) => {
     } catch (e) {
         await ctx.answerCallbackQuery("Ошибка");
     }
+});
+
+bot.callbackQuery(/^edit_(\d+)$/, async (ctx) => {
+    await ctx.conversation.enter('editReminder');
 });
 
 // Text Handler
