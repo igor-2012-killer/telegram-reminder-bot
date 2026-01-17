@@ -106,14 +106,44 @@ export class DateParser {
             { pattern: /every week/i, rule: 'weekly' },
             { pattern: /каждую неделю/i, rule: 'weekly' },
             { pattern: /еженедельно/i, rule: 'weekly' },
-            { pattern: /каждый/i, rule: 'daily' }, // Broad "every" often implies daily if time is given
+            {
+                pattern: /(?:каждые|every)\s+(\d+)\s+(?:дня|дней|days)/i,
+                ruleGenerator: (match: RegExpExecArray) => `RRULE:FREQ=DAILY;INTERVAL=${match[1]}`
+            },
+            {
+                pattern: /(?:каждые|every)\s+(\d+)\s+(?:недель|недели|weeks)/i,
+                ruleGenerator: (match: RegExpExecArray) => `RRULE:FREQ=WEEKLY;INTERVAL=${match[1]}`
+            },
+            {
+                pattern: /(?:каждый|every)\s+(понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i,
+                ruleGenerator: (match: RegExpExecArray) => {
+                    const daysMap: Record<string, string> = {
+                        'понедельник': 'MO', 'monday': 'MO',
+                        'вторник': 'TU', 'tuesday': 'TU',
+                        'среду': 'WE', 'wednesday': 'WE',
+                        'четверг': 'TH', 'thursday': 'TH',
+                        'пятницу': 'FR', 'friday': 'FR',
+                        'субботу': 'SA', 'saturday': 'SA',
+                        'воскресенье': 'SU', 'sunday': 'SU'
+                    };
+                    const day = daysMap[match[1].toLowerCase()];
+                    return `RRULE:FREQ=WEEKLY;BYDAY=${day}`;
+                }
+            },
+            { pattern: /каждую|every/i, rule: 'daily' }, // Broad "every" often implies daily if time is given
         ];
 
         for (const p of recurringPatterns) {
-            if (p.pattern.test(cleanText)) {
+            const match = p.pattern.exec(cleanText);
+            if (match) {
                 isRecurring = true;
-                recurrenceRule = p.rule;
+                if ('ruleGenerator' in p && typeof p.ruleGenerator === 'function') {
+                    recurrenceRule = p.ruleGenerator(match);
+                } else if ('rule' in p && typeof p.rule === 'string') {
+                    recurrenceRule = p.rule;
+                }
                 cleanText = cleanText.replace(p.pattern, '');
+                break; // Only one rule for now
             }
         }
 

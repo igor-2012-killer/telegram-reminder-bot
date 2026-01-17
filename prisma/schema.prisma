@@ -17,13 +17,14 @@ model User {
 
 model Reminder {
   id            Int      @id @default(autoincrement())
-  userId        BigInt
-  user          User     @relation(fields: [userId], references: [id])
+  userId        BigInt   // The user who created the reminder
+  creator       User     @relation(fields: [userId], references: [id])
+  chatId        BigInt   // The chat (user or group) where the reminder will be sent
   message       String
   triggerAt     DateTime // UTC time to trigger the reminder
   originalInput String?  // What the user typed for the date
   isRecurring   Boolean  @default(false)
-  recurrenceRule String? // Cron or text description if needed later
+  recurrenceRule String? // RRule or pattern
   completed     Boolean  @default(false)
   createdAt     DateTime @default(now())
 }

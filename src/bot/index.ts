@@ -6,6 +6,7 @@ import { askTimezone } from './conversations/timezone';
 import { editReminder } from './conversations/editReminder';
 import { prisma } from '../core/prisma';
 import { DateParser } from '../services/dateParser';
+import { STTService } from '../services/sttService';
 import { DateTime } from 'luxon';
 import logger from '../core/logger';
 
@@ -55,11 +56,12 @@ bot.command('cancel', async (ctx) => {
 });
 
 bot.command('list', async (ctx) => {
+    const chatId = ctx.chat?.id;
     const userId = ctx.from?.id;
-    if (!userId) return;
+    if (!chatId || !userId) return;
 
     const reminders = await prisma.reminder.findMany({
-        where: { userId: BigInt(userId), completed: false },
+        where: { chatId: BigInt(chatId), completed: false },
         orderBy: { triggerAt: 'asc' }
     });
 
@@ -144,26 +146,31 @@ bot.callbackQuery(/^edit_(\d+)$/, async (ctx) => {
     await ctx.conversation.enter('editReminder');
 });
 
-// Text Handler
-bot.on('message:text', async (ctx) => {
-    const userId = ctx.from.id;
+async function handleReminderInput(ctx: MyContext, text: string) {
+    const userId = ctx.from?.id;
+    const chatId = ctx.chat?.id;
+    if (!userId || !chatId) return;
+
     const user = await prisma.user.findUnique({ where: { id: BigInt(userId) } });
 
     if (!user || !user.timezone) {
-        await ctx.reply("Сначала нужно настроить часовой пояс. Запускаю настройку...");
-        await ctx.conversation.enter('askTimezone');
+        if (ctx.chat.type === 'private') {
+            await ctx.reply("Сначала нужно настроить часовой пояс. Запускаю настройку...");
+            await ctx.conversation.enter('askTimezone');
+        } else {
+            await ctx.reply("У вас не настроен часовой пояс. Пожалуйста, напишите мне в личные сообщения для настройки.");
+        }
         return;
     }
 
-    const text = ctx.message.text;
     const now = new Date();
-
     const result = DateParser.parse(text, user.timezone, now);
 
     if (result) {
         await prisma.reminder.create({
             data: {
                 userId: BigInt(userId),
+                chatId: BigInt(chatId),
                 message: result.cleanText,
                 triggerAt: result.date,
                 originalInput: text,
@@ -172,12 +179,11 @@ bot.on('message:text', async (ctx) => {
             }
         });
 
-        logger.info({ userId, message: result.cleanText, triggerAt: result.date }, "New reminder created");
+        logger.info({ userId, chatId, message: result.cleanText, triggerAt: result.date }, "New reminder created");
         const formatted = DateTime.fromJSDate(result.date).setZone(user.timezone).toFormat('dd MMM yyyy HH:mm ZZZZ');
 
-        // Find the created reminder to get its ID
         const created = await prisma.reminder.findFirst({
-            where: { userId: BigInt(userId) },
+            where: { chatId: BigInt(chatId) },
             orderBy: { id: 'desc' }
         });
 
@@ -186,4 +192,30 @@ bot.on('message:text', async (ctx) => {
     } else {
         await ctx.reply("Я не смог распознать дату в этом сообщении. Попробуй указать время точнее.");
     }
+}
+
+// Media Handler
+bot.on(["message:voice", "message:video_note"], async (ctx) => {
+    const fileId = ctx.message.voice?.file_id || ctx.message.video_note?.file_id;
+    if (!fileId) return;
+
+    const waitMsg = await ctx.reply("🎙 Расшифровываю ваше сообщение...");
+
+    try {
+        const file = await ctx.api.getFile(fileId);
+        const fileUrl = `https://api.telegram.org/file/bot${config.BOT_TOKEN}/${file.file_path}`;
+
+        const transcription = await STTService.transcribe(fileUrl);
+        await ctx.api.editMessageText(ctx.chat.id, waitMsg.message_id, `📝 Расшифровка: "${transcription}"\n\nСоздаю напоминание...`);
+
+        await handleReminderInput(ctx, transcription);
+    } catch (error) {
+        logger.error(error, "Error in media handler");
+        await ctx.api.editMessageText(ctx.chat.id, waitMsg.message_id, "⚠️ Не удалось расшифровать аудио. Попробуйте написать текстом.");
+    }
+});
+
+// Text Handler
+bot.on('message:text', async (ctx) => {
+    await handleReminderInput(ctx, ctx.message.text);
 });
