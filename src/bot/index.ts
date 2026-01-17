@@ -12,6 +12,14 @@ import logger from '../core/logger';
 
 export const bot = new Bot<MyContext>(config.BOT_TOKEN);
 
+// Set bot commands
+bot.api.setMyCommands([
+    { command: "list", description: "Список моих напоминаний" },
+    { command: "settings", description: "Настройка часового пояса" },
+    { command: "help", description: "Справка по использованию" },
+    { command: "cancel", description: "Отменить текущее действие" },
+]);
+
 // Middleware
 bot.use(session({ initial: (): SessionData => ({ isAwaitingTimezone: false }) }));
 bot.use(conversations());
