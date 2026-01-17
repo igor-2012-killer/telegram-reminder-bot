@@ -8,20 +8,25 @@ import { v4 as uuidv4 } from "uuid";
 import ffmpeg from "fluent-ffmpeg";
 import logger from "../core/logger";
 
-const openai = new OpenAI({
-    apiKey: config.GROQ_API_KEY || config.OPENAI_API_KEY,
-    baseURL: config.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined,
-});
+const getSTTClient = () => {
+    const apiKey = config.GROQ_API_KEY || config.OPENAI_API_KEY;
+    if (!apiKey) return null;
 
-const WHISPER_MODEL = config.GROQ_API_KEY ? "whisper-large-v3" : "whisper-1";
+    return new OpenAI({
+        apiKey,
+        baseURL: config.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined,
+    });
+};
+
+const getWhisperModel = () => config.GROQ_API_KEY ? "whisper-large-v3" : "whisper-1";
 
 export class STTService {
     /**
      * Transcribes a file from a URL using OpenAI Whisper.
      */
     static async transcribe(fileUrl: string): Promise<string> {
-        if (!config.OPENAI_API_KEY) {
-            throw new Error("OPENAI_API_KEY is not configured");
+        if (!config.GROQ_API_KEY && !config.OPENAI_API_KEY) {
+            throw new Error("STT is not configured (missing GROQ_API_KEY or OPENAI_API_KEY)");
         }
 
         const tempDir = os.tmpdir();
@@ -57,9 +62,12 @@ export class STTService {
             });
 
             // 3. Transcribe
-            const transcription = await openai.audio.transcriptions.create({
+            const client = getSTTClient();
+            if (!client) throw new Error("STT Client failed to initialize");
+
+            const transcription = await client.audio.transcriptions.create({
                 file: fs.createReadStream(outputPath),
-                model: WHISPER_MODEL,
+                model: getWhisperModel(),
             });
 
             return transcription.text;
