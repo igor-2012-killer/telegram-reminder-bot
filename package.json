@@ -28,7 +28,9 @@
     "homepage": "https://github.com/igor-2012-killer/telegram-reminder-bot#readme",
     "dependencies": {
         "@grammyjs/conversations": "^2.1.1",
+        "@prisma/adapter-better-sqlite3": "^6.0.0",
         "@prisma/client": "^7.2.0",
+        "better-sqlite3": "^11.0.0",
         "chrono-node": "^2.9.0",
         "dotenv": "^17.2.3",
         "grammy": "^1.39.3",
@@ -36,6 +38,7 @@
         "pino": "^10.2.0"
     },
     "devDependencies": {
+        "@types/better-sqlite3": "^7.6.13",
         "@types/luxon": "^3.7.1",
         "@types/node": "^25.0.9",
         "nodemon": "^3.1.11",
