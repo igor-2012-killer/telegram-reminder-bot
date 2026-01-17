@@ -40,56 +40,33 @@ export class DateParser {
         const result = parsedResults[0];
         const components = result.start;
 
-        // Remove the date text from the original string to clean up the message
-        // Chrono result has `index` and `text`.
-        // We might have multiple dates, but we usually look for the first one for the *trigger*.
-        // Or we should loop? For now, take the first one.
-
-        const dateText = result.text;
-        // Simple replace (careful: replace only first occurrence)
-        // Better: use string slicing with index
-        const index = result.index;
-        const cleanText = (text.slice(0, index) + text.slice(index + dateText.length)).trim().replace(/\s+/g, ' ');
-
-        // check if known values contain timezone offset
+        // check if known values contain a CERTAIN timezone offset
+        // Chrono might imply UTC if not specified, which we want to ignore in favor of user's zone.
+        const hasCertainOffset = components.isCertain('timezoneOffset');
         const timezoneOffset = components.get('timezoneOffset');
 
         let finalDate: DateTime;
         let timezoneUsed = userTimezone;
         let hasTimezone = false;
 
-        if (timezoneOffset !== null) {
+        if (hasCertainOffset && timezoneOffset !== null) {
             // User specified a timezone (e.g. "15:00 GMT")
-            // chrono returns the correct instant in time (Date object), but we want to know what happened.
-            // Actually result.date() gives a JS Date object properly shifted.
             finalDate = DateTime.fromJSDate(result.date());
             hasTimezone = true;
             timezoneUsed = `Offset ${timezoneOffset}`;
         } else {
             // Reconstruct in user timezone
-            const year = components.get('year') ?? referenceDate.getFullYear();
-            const month = components.get('month') ?? undefined;
-            const day = components.get('day') ?? undefined;
+            // IMPORTANT: use the reference date in the user's timezone for defaults
+            const userNow = DateTime.fromJSDate(referenceDate).setZone(userTimezone);
 
-            // If time is not certain, we should probably check if implicit.
-            // But let's assume if it parsed, we use it.
-            // However, if user said "Tomorrow", chrono defaults to noon or now.
-            // Let's trust chrono's date extraction but shift the *interpretation* of that local time info to the User's zone.
-
-            // Critical: chrono returns a Date which is a specific instant.
-            // If I say "Tomorrow at 5pm" and my machine is UTC, chrono gives me "Tomorrow 17:00 UTC".
-            // If the user is +3, they meant "Tomorrow 17:00 +3".
-            // So we take 17:00 from chrono results and apply +3.
-
-            // components.get('hour') gives the local hour number found.
-
+            const year = components.get('year') ?? userNow.year;
+            const month = components.get('month') ?? userNow.month;
+            const day = components.get('day') ?? userNow.day;
             let hour = components.get('hour');
             let minute = components.get('minute') ?? 0;
             let second = components.get('second') ?? 0;
 
             if (hour === null) {
-                // No time specified. Default to 09:00 AM?
-                // Or preserve what chrono did? Chrono usually puts 12:00.
                 hour = 12; // Default
             }
 
@@ -101,28 +78,56 @@ export class DateParser {
                 minute,
                 second
             }, { zone: userTimezone });
+
+            // If the time is already passed today, and we didn't specify a day (it was implied from 'userNow'), 
+            // Chrono's forwardDate logic usually handles this if we use result.date().
+            // But since we manually reconstructed, let's check if we need to bump to tomorrow.
+            if (!components.isCertain('day') && finalDate < userNow) {
+                finalDate = finalDate.plus({ days: 1 });
+            }
         }
 
-        // Simple recurring detection
-        // We look for patterns like "every day", "каждый день", "every week", "каждую неделю".
-        // This is very basic.
+        // Clean text: remove the date part and recurring keywords
+        let cleanText = text;
+
+        // 1. Remove the exact text matched by chrono
+        const index = result.index;
+        const dateText = result.text;
+        cleanText = (text.slice(0, index) + text.slice(index + dateText.length));
+
+        // 2. Detect and remove recurring keywords independently if needed
         let isRecurring = false;
         let recurrenceRule: string | undefined = undefined;
 
-        const lowerText = text.toLowerCase();
-        if (lowerText.includes('every day') || lowerText.includes('каждый день')) {
-            isRecurring = true;
-            recurrenceRule = 'daily';
-        } else if (lowerText.includes('every week') || lowerText.includes('каждую неделю')) {
-            isRecurring = true;
-            recurrenceRule = 'weekly';
+        const recurringPatterns = [
+            { pattern: /every day/i, rule: 'daily' },
+            { pattern: /каждый день/i, rule: 'daily' },
+            { pattern: /ежедневно/i, rule: 'daily' },
+            { pattern: /every week/i, rule: 'weekly' },
+            { pattern: /каждую неделю/i, rule: 'weekly' },
+            { pattern: /еженедельно/i, rule: 'weekly' },
+            { pattern: /каждый/i, rule: 'daily' }, // Broad "every" often implies daily if time is given
+        ];
+
+        for (const p of recurringPatterns) {
+            if (p.pattern.test(cleanText)) {
+                isRecurring = true;
+                recurrenceRule = p.rule;
+                cleanText = cleanText.replace(p.pattern, '');
+            }
+        }
+
+        // Final cleanup
+        cleanText = cleanText.trim().replace(/\s+/g, ' ');
+        if (!cleanText || cleanText.toLowerCase() === 'напомни' || cleanText.toLowerCase() === 'remind') {
+            cleanText = "Напоминание";
         }
 
         return {
             date: finalDate.toJSDate(),
             hasTimezone,
             timezoneUsed,
-            cleanText: cleanText || "Напоминание",
+            cleanText,
             isRecurring,
             recurrenceRule
         };
