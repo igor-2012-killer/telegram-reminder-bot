@@ -6,6 +6,7 @@ import { askTimezone } from './conversations/timezone';
 import { prisma } from '../core/prisma';
 import { DateParser } from '../services/dateParser';
 import { DateTime } from 'luxon';
+import logger from '../core/logger';
 
 export const bot = new Bot<MyContext>(config.BOT_TOKEN);
 
@@ -57,6 +58,7 @@ bot.callbackQuery(/^delete_(\d+)$/, async (ctx) => {
 
     try {
         await prisma.reminder.delete({ where: { id } });
+        logger.info({ reminderId: id }, "Reminder deleted via callback");
         await ctx.answerCallbackQuery("Напоминание удалено");
         await ctx.editMessageText(`✅ Напоминание удалено`);
     } catch (e) {
@@ -94,6 +96,7 @@ bot.on('message:text', async (ctx) => {
             }
         });
 
+        logger.info({ userId, message: result.cleanText, triggerAt: result.date }, "New reminder created");
         const formatted = DateTime.fromJSDate(result.date).setZone(user.timezone).toFormat('dd MMM yyyy HH:mm ZZZZ');
         await ctx.reply(`Принято! Я напомню: "${result.cleanText}"\n🗓 Время: ${formatted}`);
     } else {

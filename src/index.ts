@@ -1,21 +1,22 @@
 import { bot } from './bot';
 import { prisma } from './core/prisma';
 import { runScheduler } from './services/scheduler';
+import logger from './core/logger';
 
 async function main() {
     // Start Scheduler
     runScheduler(bot);
 
-    console.log("Starting bot...");
+    logger.info("Starting bot...");
     await bot.start({
         onStart: (botInfo) => {
-            console.log(`Bot @${botInfo.username} started!`);
+            logger.info(`Bot @${botInfo.username} started!`);
         }
     });
 }
 
 main().catch((e) => {
-    console.error("Error starting bot", e);
+    logger.error(e, "Error starting bot");
     process.exit(1);
 }).finally(async () => {
     await prisma.$disconnect();

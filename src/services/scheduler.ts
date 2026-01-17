@@ -2,6 +2,7 @@ import { Bot } from "grammy";
 import { MyContext } from "../bot/types";
 import { prisma } from "../core/prisma";
 import { DateTime } from 'luxon';
+import logger from "../core/logger";
 
 export function runScheduler(bot: Bot<MyContext>) {
     setInterval(async () => {
@@ -47,7 +48,7 @@ export function runScheduler(bot: Bot<MyContext>) {
                     });
                 }
             } catch (e) {
-                console.error(`Failed to send reminder ${reminder.id}`, e);
+                logger.error(e, `Failed to send reminder ${reminder.id}`);
             }
         }
 
