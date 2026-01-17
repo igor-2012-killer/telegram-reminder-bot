@@ -26,7 +26,12 @@ export class DateParser {
         // Chrono's handling of timezones in the text (e.g. "GMT") is automatic.
         // If no timezone is found in text, it returns a date that is effectively "local" to the system or implied.
 
-        const parsedResults = chrono.parse(text, referenceDate, { forwardDate: true });
+        // Try Russian first, then fallback to English
+        let parsedResults = chrono.ru.casual.parse(text, referenceDate, { forwardDate: true });
+
+        if (parsedResults.length === 0) {
+            parsedResults = chrono.parse(text, referenceDate, { forwardDate: true });
+        }
 
         if (parsedResults.length === 0) {
             return null;
