@@ -1,9 +1,10 @@
+import { Context, SessionFlavor } from "grammy";
 import { type Conversation } from "@grammyjs/conversations";
-import { MyContext } from "../types";
+import { MyContext, SessionData } from "../types";
 import { DateTime } from 'luxon';
 import { prisma } from "../../core/prisma";
 
-export async function askTimezone(conversation: Conversation<MyContext>, ctx: MyContext) {
+export async function askTimezone(conversation: Conversation<MyContext, Context & SessionFlavor<SessionData>>, ctx: Context & SessionFlavor<SessionData>) {
     await ctx.reply("Привет! Перед началом работы, пожалуйста, укажи свой часовой пояс. \nНапиши город (например, 'Moscow') или регион (например, 'Europe/Moscow').");
 
     // Loop until valid

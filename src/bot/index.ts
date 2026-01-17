@@ -1,4 +1,4 @@
-import { Bot, session, InlineKeyboard } from 'grammy';
+import { Bot, session, InlineKeyboard, Context, SessionFlavor } from 'grammy';
 import { conversations, createConversation } from "@grammyjs/conversations";
 import { config } from '../core/config';
 import { MyContext, SessionData } from './types';
@@ -12,7 +12,7 @@ export const bot = new Bot<MyContext>(config.BOT_TOKEN);
 // Middleware
 bot.use(session({ initial: (): SessionData => ({ isAwaitingTimezone: false }) }));
 bot.use(conversations());
-bot.use(createConversation(askTimezone));
+bot.use(createConversation<MyContext, Context & SessionFlavor<SessionData>>(askTimezone));
 
 // Commands
 bot.command('start', async (ctx) => {

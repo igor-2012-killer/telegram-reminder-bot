@@ -27,22 +27,21 @@
     },
     "homepage": "https://github.com/igor-2012-killer/telegram-reminder-bot#readme",
     "dependencies": {
-        "@grammyjs/conversations": "^1.2.0",
-        "@prisma/client": "^5.9.0",
-        "chrono-node": "^2.7.5",
-        "dotenv": "^16.4.1",
-        "grammy": "^1.21.0",
-        "luxon": "^3.4.4",
-        "pino": "^8.18.0"
+        "@grammyjs/conversations": "^2.1.1",
+        "@prisma/client": "^7.2.0",
+        "chrono-node": "^2.9.0",
+        "dotenv": "^17.2.3",
+        "grammy": "^1.39.3",
+        "luxon": "^3.7.2",
+        "pino": "^10.2.0"
     },
     "devDependencies": {
-        "@types/luxon": "^3.4.2",
-        "@types/node": "^20.11.10",
-        "@types/pino": "^7.0.5",
-        "nodemon": "^3.0.3",
+        "@types/luxon": "^3.7.1",
+        "@types/node": "^25.0.9",
+        "nodemon": "^3.1.11",
         "pino-pretty": "^10.3.1",
-        "prisma": "^5.9.0",
+        "prisma": "^7.2.0",
         "ts-node": "^10.9.2",
-        "typescript": "^5.3.3"
+        "typescript": "^5.9.3"
     }
 }

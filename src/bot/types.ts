@@ -5,4 +5,4 @@ export interface SessionData {
     isAwaitingTimezone: boolean;
 }
 
-export type MyContext = Context & SessionFlavor<SessionData> & ConversationFlavor;
+export type MyContext = ConversationFlavor<Context & SessionFlavor<SessionData>>;
