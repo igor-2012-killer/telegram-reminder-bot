@@ -68,7 +68,7 @@ export async function askTimezone(conversation: Conversation<MyContext, Context 
             }
             if (data.startsWith("tz_")) {
                 timezone = data.replace("tz_", "");
-                await ctx.answerCallbackQuery();
+                await result.answerCallbackQuery();
             }
         } else if (result.message?.text) {
             const rawInput = result.message.text;

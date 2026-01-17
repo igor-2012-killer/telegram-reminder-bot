@@ -15,6 +15,15 @@ bot.use(session({ initial: (): SessionData => ({ isAwaitingTimezone: false }) })
 bot.use(conversations());
 bot.use(createConversation<MyContext, Context & SessionFlavor<SessionData>>(askTimezone));
 
+// Error handling
+bot.catch((err) => {
+    const ctx = err.ctx;
+    logger.error({
+        update_id: ctx.update.update_id,
+        err: err.error
+    }, `Error while handling update ${ctx.update.update_id}`);
+});
+
 // Commands
 bot.command('start', async (ctx) => {
     await ctx.conversation.enter('askTimezone');
