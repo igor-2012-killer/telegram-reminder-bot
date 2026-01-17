@@ -1,4 +1,4 @@
-import { Bot } from "grammy";
+import { Bot, InlineKeyboard } from "grammy";
 import { MyContext } from "../bot/types";
 import { prisma } from "../core/prisma";
 import { DateTime } from 'luxon';
@@ -19,7 +19,14 @@ export function runScheduler(bot: Bot<MyContext>) {
 
         for (const reminder of pendingReminders) {
             try {
-                await bot.api.sendMessage(Number(reminder.userId), `🔔 НАПОМИНАНИЕ!\n\n${reminder.message}`);
+                const keyboard = new InlineKeyboard()
+                    .text("✅ Готово", `done_${reminder.id}`)
+                    .text("💤 +15м", `snooze_${reminder.id}_15`)
+                    .text("💤 +1ч", `snooze_${reminder.id}_60`);
+
+                await bot.api.sendMessage(Number(reminder.userId), `🔔 НАПОМИНАНИЕ!\n\n${reminder.message}`, {
+                    reply_markup: keyboard
+                });
 
                 if (reminder.isRecurring && reminder.recurrenceRule && reminder.user?.timezone) {
                     const tz = reminder.user.timezone;

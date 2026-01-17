@@ -82,8 +82,45 @@ bot.callbackQuery(/^delete_(\d+)$/, async (ctx) => {
         await ctx.editMessageText(`✅ Напоминание удалено`);
     } catch (e) {
         await ctx.answerCallbackQuery("Ошибка удаления");
-        // If it's already deleted or not found
         await ctx.editMessageText("⚠️ Напоминание не найдено или уже удалено");
+    }
+});
+
+bot.callbackQuery(/^snooze_(\d+)_(\d+)$/, async (ctx) => {
+    const id = parseInt(ctx.match[1]);
+    const minutes = parseInt(ctx.match[2]);
+
+    try {
+        const reminder = await prisma.reminder.findUnique({ where: { id } });
+        if (!reminder) throw new Error("Not found");
+
+        const newTime = DateTime.now().plus({ minutes }).toJSDate();
+        await prisma.reminder.update({
+            where: { id },
+            data: { triggerAt: newTime, completed: false }
+        });
+
+        logger.info({ reminderId: id, minutes }, "Reminder snoozed");
+        await ctx.answerCallbackQuery(`Отложено на ${minutes} мин.`);
+        await ctx.editMessageText(`💤 Напоминание отложено на ${minutes} минут.\n\n${reminder.message}`);
+    } catch (e) {
+        await ctx.answerCallbackQuery("Ошибка");
+        await ctx.editMessageText("⚠️ Не удалось отложить напоминание");
+    }
+});
+
+bot.callbackQuery(/^done_(\d+)$/, async (ctx) => {
+    const id = parseInt(ctx.match[1]);
+
+    try {
+        await prisma.reminder.update({
+            where: { id },
+            data: { completed: true }
+        });
+        await ctx.answerCallbackQuery("Готово!");
+        await ctx.editMessageText(`✅ Выполнено!\n\n${(await prisma.reminder.findUnique({ where: { id } }))?.message || ""}`);
+    } catch (e) {
+        await ctx.answerCallbackQuery("Ошибка");
     }
 });
 
@@ -117,7 +154,15 @@ bot.on('message:text', async (ctx) => {
 
         logger.info({ userId, message: result.cleanText, triggerAt: result.date }, "New reminder created");
         const formatted = DateTime.fromJSDate(result.date).setZone(user.timezone).toFormat('dd MMM yyyy HH:mm ZZZZ');
-        await ctx.reply(`Принято! Я напомню: "${result.cleanText}"\n🗓 Время: ${formatted}`);
+
+        // Find the created reminder to get its ID
+        const created = await prisma.reminder.findFirst({
+            where: { userId: BigInt(userId) },
+            orderBy: { id: 'desc' }
+        });
+
+        const keyboard = created ? new InlineKeyboard().text("❌ Удалить", `delete_${created.id}`) : undefined;
+        await ctx.reply(`Принято! Я напомню: "${result.cleanText}"\n🗓 Время: ${formatted}`, { reply_markup: keyboard });
     } else {
         await ctx.reply("Я не смог распознать дату в этом сообщении. Попробуй указать время точнее.");
     }
