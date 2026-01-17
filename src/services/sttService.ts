@@ -9,24 +9,23 @@ import ffmpeg from "fluent-ffmpeg";
 import logger from "../core/logger";
 
 const getSTTClient = () => {
-    const apiKey = config.GROQ_API_KEY || config.OPENAI_API_KEY;
-    if (!apiKey) return null;
+    if (!config.GROQ_API_KEY) return null;
 
     return new OpenAI({
-        apiKey,
-        baseURL: config.GROQ_API_KEY ? "https://api.groq.com/openai/v1" : undefined,
+        apiKey: config.GROQ_API_KEY,
+        baseURL: "https://api.groq.com/openai/v1",
     });
 };
 
-const getWhisperModel = () => config.GROQ_API_KEY ? "whisper-large-v3" : "whisper-1";
+const WHISPER_MODEL = "whisper-large-v3";
 
 export class STTService {
     /**
      * Transcribes a file from a URL using OpenAI Whisper.
      */
     static async transcribe(fileUrl: string): Promise<string> {
-        if (!config.GROQ_API_KEY && !config.OPENAI_API_KEY) {
-            throw new Error("STT is not configured (missing GROQ_API_KEY or OPENAI_API_KEY)");
+        if (!config.GROQ_API_KEY) {
+            throw new Error("GROQ_API_KEY is not configured");
         }
 
         const tempDir = os.tmpdir();
@@ -67,7 +66,7 @@ export class STTService {
 
             const transcription = await client.audio.transcriptions.create({
                 file: fs.createReadStream(outputPath),
-                model: getWhisperModel(),
+                model: WHISPER_MODEL,
             });
 
             return transcription.text;

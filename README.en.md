@@ -11,10 +11,11 @@ An advanced, open-source Telegram bot for setting reminders using natural langua
 ## Features
 
 -   **Natural Language Parsing**: Supports inputs like "Remind me to call mom in 10 minutes", "Tomorrow at 3 PM go grocery shopping", "Every Monday cleaning".
+-   **AI Transcription (STT)**: Send a voice message or video note, and the bot will automatically transcribe it to create a reminder (powered by [Groq AI](https://groq.com/)).
+-   **Advanced Recurrence**: Support for complex rules (every 3 days, on Mondays, etc.) via `rrule`.
+-   **Group Support**: The bot works in groups, reminding all members about important tasks.
 -   **Timezone Awareness**: Handles user timezones automatically (asks on first start) and supports city aliases (e.g., "Moscow", "NY").
--   **Recurrence**: Supports "every day" and "every week" reminders with accurate timezone arithmetic.
--   **Management**: List and delete reminders with an interactive UI and Inline Keyboards.
--   **Modern Stack**: Node.js 22 (Debian Slim), TypeScript, grammY, Prisma (SQLite).
+-   **Modern Stack**: Node.js 22 (Debian Slim), TypeScript, grammY, Prisma (SQLite), Groq Whisper.
 
 ## Requirements
 
