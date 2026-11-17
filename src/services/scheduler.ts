@@ -1,84 +1,94 @@
 import { Bot, InlineKeyboard } from "grammy";
 import { MyContext } from "../bot/types";
 import { prisma } from "../core/prisma";
-import { DateTime } from 'luxon';
+import { errorForLog } from "../core/redact";
 import logger from "../core/logger";
+import { isPermanentDeliveryError } from "./deliveryError";
+import { nextOccurrence } from "./recurrence";
 
-export function runScheduler(bot: Bot<MyContext>) {
-    setInterval(async () => {
-        const now = new Date();
-        const pendingReminders = await prisma.reminder.findMany({
-            where: {
-                completed: false,
-                triggerAt: {
-                    lte: now
-                }
-            },
-            include: { creator: true }
-        });
+const TICK_MS = 10_000;
+const BATCH_SIZE = 50;
 
-        for (const reminder of pendingReminders) {
-            try {
-                const keyboard = new InlineKeyboard()
-                    .text("✅ Готово", `done_${reminder.id}`)
-                    .row()
-                    .text("💤 +15м", `snooze_${reminder.id}_15`)
-                    .text("💤 +1ч", `snooze_${reminder.id}_60`);
+let ticking = false;
 
-                await bot.api.sendMessage(
-                    Number(reminder.chatId),
-                    `⏰ Напоминание!\n\n${reminder.message}`,
-                    { reply_markup: keyboard }
+async function markCompleted(id: number) {
+    await prisma.reminder.update({
+        where: { id },
+        data: { completed: true }
+    });
+}
+
+export async function processDueReminders(bot: Bot<MyContext>, now = new Date()) {
+    const pendingReminders = await prisma.reminder.findMany({
+        where: {
+            completed: false,
+            triggerAt: {
+                lte: now
+            }
+        },
+        include: { creator: true },
+        orderBy: { triggerAt: "asc" },
+        take: BATCH_SIZE
+    });
+
+    for (const reminder of pendingReminders) {
+        try {
+            const keyboard = new InlineKeyboard()
+                .text("✅ Готово", `done_${reminder.id}`)
+                .row()
+                .text("💤 +15м", `snooze_${reminder.id}_15`)
+                .text("💤 +1ч", `snooze_${reminder.id}_60`);
+
+            await bot.api.sendMessage(
+                Number(reminder.chatId),
+                `⏰ Напоминание!\n\n${reminder.message}`,
+                { reply_markup: keyboard }
+            );
+
+            if (reminder.isRecurring && reminder.recurrenceRule && reminder.creator?.timezone) {
+                const next = nextOccurrence(
+                    reminder.recurrenceRule,
+                    reminder.triggerAt,
+                    now,
+                    reminder.creator.timezone
                 );
-
-                if (reminder.isRecurring && reminder.recurrenceRule && reminder.creator?.timezone) {
-                    const tz = reminder.creator.timezone;
-                    let nextTrigger: DateTime;
-
-                    if (reminder.recurrenceRule.startsWith('RRULE:')) {
-                        const { RRule } = await import('rrule');
-                        const rule = RRule.fromString(reminder.recurrenceRule);
-                        const nextDate = rule.after(now);
-                        if (nextDate) {
-                            nextTrigger = DateTime.fromJSDate(nextDate).setZone(tz);
-                        } else {
-                            // Rule finished or no more occurrences
-                            await prisma.reminder.update({
-                                where: { id: reminder.id },
-                                data: { completed: true }
-                            });
-                            continue;
-                        }
-                    } else {
-                        nextTrigger = DateTime.fromJSDate(reminder.triggerAt).setZone(tz);
-                        const nowZoned = DateTime.fromJSDate(now).setZone(tz);
-
-                        // Add intervals until we are in the future
-                        while (nextTrigger <= nowZoned) {
-                            if (reminder.recurrenceRule === 'daily') {
-                                nextTrigger = nextTrigger.plus({ days: 1 });
-                            } else if (reminder.recurrenceRule === 'weekly' || reminder.recurrenceRule === 'every week') {
-                                nextTrigger = nextTrigger.plus({ weeks: 1 });
-                            } else {
-                                break; // Unknown simple rule
-                            }
-                        }
-                    }
-
-                    await prisma.reminder.update({
-                        where: { id: reminder.id },
-                        data: { triggerAt: nextTrigger.toJSDate() }
-                    });
-                } else {
-                    await prisma.reminder.update({
-                        where: { id: reminder.id },
-                        data: { completed: true }
-                    });
+                if (!next) {
+                    await markCompleted(reminder.id);
+                    continue;
                 }
-            } catch (e) {
-                logger.error(e, `Failed to send reminder ${reminder.id}`);
+                await prisma.reminder.update({
+                    where: { id: reminder.id },
+                    data: { triggerAt: next }
+                });
+            } else {
+                await markCompleted(reminder.id);
+            }
+        } catch (e) {
+            if (isPermanentDeliveryError(e)) {
+                try {
+                    await markCompleted(reminder.id);
+                } catch (updateError) {
+                    logger.error({ reminderId: reminder.id, error: errorForLog(updateError) }, "Failed to retire undeliverable reminder");
+                }
+                logger.warn({ reminderId: reminder.id, error: errorForLog(e) }, "Stopped retrying undeliverable reminder");
+            } else {
+                logger.error({ reminderId: reminder.id, error: errorForLog(e) }, "Failed to send reminder");
             }
         }
+    }
+}
 
-    }, 10000); // Check every 10s
+export function runScheduler(bot: Bot<MyContext>) {
+    const timer = setInterval(() => {
+        if (ticking) return;
+        ticking = true;
+        processDueReminders(bot)
+            .catch((error) => {
+                logger.error({ error: errorForLog(error) }, "Scheduler tick failed");
+            })
+            .finally(() => {
+                ticking = false;
+            });
+    }, TICK_MS);
+    timer.unref?.();
 }

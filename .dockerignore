@@ -1,0 +1,21 @@
+# Secrets and local databases must not be copied into image layers.
+.env
+.env.*
+*.db
+*.db-journal
+
+# Build inputs that are reinstalled or regenerated inside the image.
+node_modules
+dist
+.git
+.github
+
+# Not needed at runtime.
+test
+coverage
+*.log
+npm-debug.log*
+.DS_Store
+.idea
+.vscode
+github_preview.png

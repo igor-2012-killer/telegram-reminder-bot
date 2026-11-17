@@ -7,6 +7,7 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - NODE_ENV=production
     volumes:
+      # The process runs as uid 1000 (node). This file must be writable by that user.
       - ./prisma/dev.db:/app/prisma/dev.db
     healthcheck:
       test: ["CMD", "pgrep", "-f", "dist/index.js"]

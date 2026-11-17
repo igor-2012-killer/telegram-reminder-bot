@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY package*.json ./
 
-RUN npm install
+RUN npm ci
 
 COPY . .
 
@@ -28,6 +28,9 @@ RUN npx prisma generate
 
 # Build TypeScript
 RUN npm run build
+
+RUN chown -R node:node /app
+USER node
 
 # Start command
 CMD ["npm", "start"]
