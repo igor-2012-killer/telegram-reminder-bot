@@ -10,9 +10,11 @@ export function isPermanentDeliveryError(error: unknown): boolean {
     if (error.error_code !== 400) return false;
 
     const description = error.description.toLowerCase();
-    return description.includes("chat not found")
-        || description.includes("user is deactivated")
-        || description.includes("peer_id_invalid")
-        || description.includes("bot was kicked")
-        || description.includes("have no rights to send");
+    return (
+        description.includes("chat not found") ||
+        description.includes("user is deactivated") ||
+        description.includes("peer_id_invalid") ||
+        description.includes("bot was kicked") ||
+        description.includes("have no rights to send")
+    );
 }

@@ -13,7 +13,10 @@ export const UPDATE_RATE_LIMIT = 5;
 export const UPDATE_RATE_WINDOW_MS = 10_000;
 export const RATE_LIMIT_MESSAGE = "Слишком много сообщений. Подождите немного и попробуйте снова.";
 
-export function mediaRejectionReason(media: { duration?: number; file_size?: number }): string | null {
+export function mediaRejectionReason(media: {
+    duration?: number;
+    file_size?: number;
+}): string | null {
     if (media.duration == null || media.duration <= 0 || media.duration > MAX_MEDIA_DURATION_SEC) {
         return `Могу расшифровать только сообщения до ${MAX_MEDIA_DURATION_SEC} секунд.`;
     }

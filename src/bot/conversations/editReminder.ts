@@ -1,13 +1,16 @@
 import { Context, SessionFlavor, InlineKeyboard } from "grammy";
 import { type Conversation } from "@grammyjs/conversations";
 import { MyContext, SessionData } from "../types";
-import { DateTime } from 'luxon';
+import { DateTime } from "luxon";
 import { prisma } from "../../core/prisma";
 import { DateParser, InvalidRecurrenceIntervalError } from "../../services/dateParser";
 import { findReminderInChat, updateReminderInChat } from "../../services/reminderAccess";
 import logger from "../../core/logger";
 
-export async function editReminder(conversation: Conversation<MyContext, Context & SessionFlavor<SessionData>>, ctx: Context & SessionFlavor<SessionData>) {
+export async function editReminder(
+    conversation: Conversation<MyContext, Context & SessionFlavor<SessionData>>,
+    ctx: Context & SessionFlavor<SessionData>,
+) {
     const reminderIdStr = ctx.callbackQuery?.data?.replace("edit_", "");
     if (!reminderIdStr) return;
 
@@ -35,10 +38,10 @@ export async function editReminder(conversation: Conversation<MyContext, Context
 
     await ctx.editMessageText(
         `Редактирование напоминания:\n\n` +
-        `📝 **Текст:** ${reminder.message}\n` +
-        `⏰ **Время:** ${DateTime.fromJSDate(reminder.triggerAt).toFormat('dd.MM.yyyy HH:mm')}\n\n` +
-        `Что вы хотите изменить?`,
-        { reply_markup: menu, parse_mode: "Markdown" }
+            `📝 **Текст:** ${reminder.message}\n` +
+            `⏰ **Время:** ${DateTime.fromJSDate(reminder.triggerAt).toFormat("dd.MM.yyyy HH:mm")}\n\n` +
+            `Что вы хотите изменить?`,
+        { reply_markup: menu, parse_mode: "Markdown" },
     );
 
     const result = await conversation.wait();
@@ -57,7 +60,9 @@ export async function editReminder(conversation: Conversation<MyContext, Context
         await ctx.editMessageText("Введите новый текст для напоминания:");
         const textUpdate = await conversation.waitFor("message:text");
 
-        const updated = await updateReminderInChat(reminderId, chatKey, { message: textUpdate.message.text });
+        const updated = await updateReminderInChat(reminderId, chatKey, {
+            message: textUpdate.message.text,
+        });
         if (updated.count === 0) {
             await textUpdate.reply("⚠️ Напоминание не найдено.");
             return;
@@ -65,10 +70,11 @@ export async function editReminder(conversation: Conversation<MyContext, Context
 
         logger.info({ reminderId }, "Reminder text updated");
         await textUpdate.reply("✅ Текст обновлен!");
-    }
-    else if (action === `edit_time_${reminderId}`) {
+    } else if (action === `edit_time_${reminderId}`) {
         await ctx.answerCallbackQuery();
-        await ctx.editMessageText("Введите новое время (например, 'завтра в 10 утра' или 'через 2 часа'):");
+        await ctx.editMessageText(
+            "Введите новое время (например, 'завтра в 10 утра' или 'через 2 часа'):",
+        );
 
         const timeUpdate = await conversation.waitFor("message:text");
         const user = await prisma.user.findUnique({ where: { id: BigInt(ctx.from!.id) } });
@@ -80,7 +86,9 @@ export async function editReminder(conversation: Conversation<MyContext, Context
             parseResult = DateParser.parse(timeUpdate.message.text, user.timezone, new Date());
         } catch (e) {
             if (e instanceof InvalidRecurrenceIntervalError) {
-                await timeUpdate.reply("Интервал повтора должен быть от 1 до 999. Редактирование отменено.");
+                await timeUpdate.reply(
+                    "Интервал повтора должен быть от 1 до 999. Редактирование отменено.",
+                );
                 return;
             }
             throw e;
@@ -90,7 +98,7 @@ export async function editReminder(conversation: Conversation<MyContext, Context
             const updated = await updateReminderInChat(reminderId, chatKey, {
                 triggerAt: parseResult.date,
                 isRecurring: parseResult.isRecurring,
-                recurrenceRule: parseResult.recurrenceRule
+                recurrenceRule: parseResult.recurrenceRule,
             });
             if (updated.count === 0) {
                 await timeUpdate.reply("⚠️ Напоминание не найдено.");
@@ -98,8 +106,12 @@ export async function editReminder(conversation: Conversation<MyContext, Context
             }
 
             logger.info({ reminderId, newTime: parseResult.date }, "Reminder time updated");
-            const formatted = DateTime.fromJSDate(parseResult.date).setZone(user.timezone).toFormat('dd.MM.yyyy HH:mm');
-            await timeUpdate.reply(`✅ Время обновлено на: **${formatted}**`, { parse_mode: "Markdown" });
+            const formatted = DateTime.fromJSDate(parseResult.date)
+                .setZone(user.timezone)
+                .toFormat("dd.MM.yyyy HH:mm");
+            await timeUpdate.reply(`✅ Время обновлено на: **${formatted}**`, {
+                parse_mode: "Markdown",
+            });
         } else {
             await timeUpdate.reply("❌ Не удалось распознать дату. Редактирование отменено.");
         }

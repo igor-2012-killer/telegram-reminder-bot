@@ -3,10 +3,10 @@ import { MyContext } from "../types";
 import { prisma } from "../../core/prisma";
 
 export const authMiddleware: Middleware<MyContext> = async (ctx, next) => {
-    if (ctx.from && ctx.chat?.type === 'private') {
-        // We generally rely on interactions to create users, 
+    if (ctx.from && ctx.chat?.type === "private") {
+        // We generally rely on interactions to create users,
         // but it's good to ensure we know the user if they are sending messages.
-        // For the purpose of the bot, we might not strictly need to query DB on every request 
+        // For the purpose of the bot, we might not strictly need to query DB on every request
         // unless we need the timezone.
         // Let's pass for now and rely on specific handlers to check.
         // Or we can cache the user session.

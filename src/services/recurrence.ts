@@ -33,7 +33,12 @@ export function recurrenceRuleIsSafe(rule: string): boolean {
  * Next fire time strictly after `now`, or null when the rule is finished or unsafe.
  * Unsafe rules (INTERVAL=0, unknown patterns) return null without iterating.
  */
-export function nextOccurrence(rule: string, triggerAt: Date, now: Date, timezone: string): Date | null {
+export function nextOccurrence(
+    rule: string,
+    triggerAt: Date,
+    now: Date,
+    timezone: string,
+): Date | null {
     if (!recurrenceRuleIsSafe(rule)) return null;
 
     if (rule.startsWith("RRULE:")) {

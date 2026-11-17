@@ -1,6 +1,6 @@
-import * as chrono from 'chrono-node';
-import { DateTime } from 'luxon';
-import { parseRecurrenceInterval } from './recurrence';
+import * as chrono from "chrono-node";
+import { DateTime } from "luxon";
+import { parseRecurrenceInterval } from "./recurrence";
 
 export class InvalidRecurrenceIntervalError extends Error {
     constructor() {
@@ -9,7 +9,8 @@ export class InvalidRecurrenceIntervalError extends Error {
     }
 }
 
-const EXPLICIT_INTERVAL = /(?:каждые|every)\s+(\d+)\s+(?:дня|день|дней|days|day|недель|недели|неделю|weeks|week)/i;
+const EXPLICIT_INTERVAL =
+    /(?:каждые|every)\s+(\d+)\s+(?:дня|день|дней|days|day|недель|недели|неделю|weeks|week)/i;
 
 interface ParseResult {
     date: Date;
@@ -27,7 +28,11 @@ export class DateParser {
      * @param userTimezone The user's IANA timezone (e.g., 'Europe/Moscow')
      * @param referenceDate The reference date (usually now)
      */
-    static parse(text: string, userTimezone: string, referenceDate: Date = new Date()): ParseResult | null {
+    static parse(
+        text: string,
+        userTimezone: string,
+        referenceDate: Date = new Date(),
+    ): ParseResult | null {
         // First, check if chrono finds a date
         // passing { timezone: ... } to chrono options might help, but chrono is a bit tricky with explicit vs implied timezones across locales.
         // We will try to parse it.
@@ -52,8 +57,8 @@ export class DateParser {
 
         // check if known values contain a CERTAIN timezone offset
         // Chrono might imply UTC if not specified, which we want to ignore in favor of user's zone.
-        const hasCertainOffset = components.isCertain('timezoneOffset');
-        const timezoneOffset = components.get('timezoneOffset');
+        const hasCertainOffset = components.isCertain("timezoneOffset");
+        const timezoneOffset = components.get("timezoneOffset");
 
         let finalDate: DateTime;
         let timezoneUsed = userTimezone;
@@ -69,30 +74,33 @@ export class DateParser {
             // IMPORTANT: use the reference date in the user's timezone for defaults
             const userNow = DateTime.fromJSDate(referenceDate).setZone(userTimezone);
 
-            const year = components.get('year') ?? userNow.year;
-            const month = components.get('month') ?? userNow.month;
-            const day = components.get('day') ?? userNow.day;
-            let hour = components.get('hour');
-            let minute = components.get('minute') ?? 0;
-            let second = components.get('second') ?? 0;
+            const year = components.get("year") ?? userNow.year;
+            const month = components.get("month") ?? userNow.month;
+            const day = components.get("day") ?? userNow.day;
+            let hour = components.get("hour");
+            let minute = components.get("minute") ?? 0;
+            let second = components.get("second") ?? 0;
 
             if (hour === null) {
                 hour = 12; // Default
             }
 
-            finalDate = DateTime.fromObject({
-                year,
-                month,
-                day,
-                hour,
-                minute,
-                second
-            }, { zone: userTimezone });
+            finalDate = DateTime.fromObject(
+                {
+                    year,
+                    month,
+                    day,
+                    hour,
+                    minute,
+                    second,
+                },
+                { zone: userTimezone },
+            );
 
-            // If the time is already passed today, and we didn't specify a day (it was implied from 'userNow'), 
+            // If the time is already passed today, and we didn't specify a day (it was implied from 'userNow'),
             // Chrono's forwardDate logic usually handles this if we use result.date().
             // But since we manually reconstructed, let's check if we need to bump to tomorrow.
-            if (!components.isCertain('day') && finalDate < userNow) {
+            if (!components.isCertain("day") && finalDate < userNow) {
                 finalDate = finalDate.plus({ days: 1 });
             }
         }
@@ -110,26 +118,26 @@ export class DateParser {
         // 1. Remove the exact text matched by chrono
         const index = result.index;
         const dateText = result.text;
-        cleanText = (text.slice(0, index) + text.slice(index + dateText.length));
+        cleanText = text.slice(0, index) + text.slice(index + dateText.length);
 
         // 2. Detect and remove recurring keywords independently if needed
         let isRecurring = false;
         let recurrenceRule: string | undefined = undefined;
 
         const recurringPatterns = [
-            { pattern: /every day/i, rule: 'daily' },
-            { pattern: /каждый день/i, rule: 'daily' },
-            { pattern: /ежедневно/i, rule: 'daily' },
-            { pattern: /every week/i, rule: 'weekly' },
-            { pattern: /каждую неделю/i, rule: 'weekly' },
-            { pattern: /еженедельно/i, rule: 'weekly' },
+            { pattern: /every day/i, rule: "daily" },
+            { pattern: /каждый день/i, rule: "daily" },
+            { pattern: /ежедневно/i, rule: "daily" },
+            { pattern: /every week/i, rule: "weekly" },
+            { pattern: /каждую неделю/i, rule: "weekly" },
+            { pattern: /еженедельно/i, rule: "weekly" },
             {
                 pattern: /(?:каждые|every)\s+(\d+)\s+(?:дня|дней|days)/i,
                 ruleGenerator: (match: RegExpExecArray) => {
                     const interval = parseRecurrenceInterval(match[1]);
                     if (interval === null) return null;
                     return `RRULE:FREQ=DAILY;INTERVAL=${interval}`;
-                }
+                },
             },
             {
                 pattern: /(?:каждые|every)\s+(\d+)\s+(?:недель|недели|weeks)/i,
@@ -137,46 +145,58 @@ export class DateParser {
                     const interval = parseRecurrenceInterval(match[1]);
                     if (interval === null) return null;
                     return `RRULE:FREQ=WEEKLY;INTERVAL=${interval}`;
-                }
+                },
             },
             {
-                pattern: /(?:каждый|every)\s+(понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i,
+                pattern:
+                    /(?:каждый|every)\s+(понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i,
                 ruleGenerator: (match: RegExpExecArray) => {
                     const daysMap: Record<string, string> = {
-                        'понедельник': 'MO', 'monday': 'MO',
-                        'вторник': 'TU', 'tuesday': 'TU',
-                        'среду': 'WE', 'wednesday': 'WE',
-                        'четверг': 'TH', 'thursday': 'TH',
-                        'пятницу': 'FR', 'friday': 'FR',
-                        'субботу': 'SA', 'saturday': 'SA',
-                        'воскресенье': 'SU', 'sunday': 'SU'
+                        понедельник: "MO",
+                        monday: "MO",
+                        вторник: "TU",
+                        tuesday: "TU",
+                        среду: "WE",
+                        wednesday: "WE",
+                        четверг: "TH",
+                        thursday: "TH",
+                        пятницу: "FR",
+                        friday: "FR",
+                        субботу: "SA",
+                        saturday: "SA",
+                        воскресенье: "SU",
+                        sunday: "SU",
                     };
                     const day = daysMap[match[1].toLowerCase()];
                     return `RRULE:FREQ=WEEKLY;BYDAY=${day}`;
-                }
+                },
             },
-            { pattern: /каждую|every/i, rule: 'daily' }, // Broad "every" often implies daily if time is given
+            { pattern: /каждую|every/i, rule: "daily" }, // Broad "every" often implies daily if time is given
         ];
 
         for (const p of recurringPatterns) {
             const match = p.pattern.exec(cleanText);
             if (match) {
                 isRecurring = true;
-                if ('ruleGenerator' in p && typeof p.ruleGenerator === 'function') {
+                if ("ruleGenerator" in p && typeof p.ruleGenerator === "function") {
                     const generated = p.ruleGenerator(match);
                     if (generated == null) throw new InvalidRecurrenceIntervalError();
                     recurrenceRule = generated;
-                } else if ('rule' in p && typeof p.rule === 'string') {
+                } else if ("rule" in p && typeof p.rule === "string") {
                     recurrenceRule = p.rule;
                 }
-                cleanText = cleanText.replace(p.pattern, '');
+                cleanText = cleanText.replace(p.pattern, "");
                 break; // Only one rule for now
             }
         }
 
         // Final cleanup
-        cleanText = cleanText.trim().replace(/\s+/g, ' ');
-        if (!cleanText || cleanText.toLowerCase() === 'напомни' || cleanText.toLowerCase() === 'remind') {
+        cleanText = cleanText.trim().replace(/\s+/g, " ");
+        if (
+            !cleanText ||
+            cleanText.toLowerCase() === "напомни" ||
+            cleanText.toLowerCase() === "remind"
+        ) {
             cleanText = "Напоминание";
         }
 
@@ -186,7 +206,7 @@ export class DateParser {
             timezoneUsed,
             cleanText,
             isRecurring,
-            recurrenceRule
+            recurrenceRule,
         };
     }
 }

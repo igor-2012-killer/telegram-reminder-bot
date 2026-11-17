@@ -25,7 +25,9 @@ let schedulerRetryDelayMs = 60_000;
 const calls: ApiCall[] = [];
 let sendFailure: { error_code: number; description: string } | null = null;
 let updateSeq = 1;
-const nodeFetch = createRequire(__filename)("node-fetch") as { default: (...args: any[]) => Promise<any> };
+const nodeFetch = createRequire(__filename)("node-fetch") as {
+    default: (...args: any[]) => Promise<any>;
+};
 const originalFetch = nodeFetch.default;
 
 function fakeTelegramResponse(body: unknown) {
@@ -38,7 +40,9 @@ function resetApi() {
 }
 
 function texts(method: string) {
-    return calls.filter((call) => call.method === method).map((call) => String(call.payload.text ?? ""));
+    return calls
+        .filter((call) => call.method === method)
+        .map((call) => String(call.payload.text ?? ""));
 }
 
 function baseMessage(userId: number, chatId: number, chatType: "private" | "group") {
@@ -47,20 +51,31 @@ function baseMessage(userId: number, chatId: number, chatType: "private" | "grou
         message_id: id,
         date: Math.floor(Date.now() / 1000),
         from: { id: userId, is_bot: false, first_name: "U" },
-        chat: chatType === "private"
-            ? { id: chatId, type: "private" as const, first_name: "U" }
-            : { id: chatId, type: "group" as const, title: "Group" },
+        chat:
+            chatType === "private"
+                ? { id: chatId, type: "private" as const, first_name: "U" }
+                : { id: chatId, type: "group" as const, title: "Group" },
     };
 }
 
-function textUpdate(userId: number, chatId: number, text: string, chatType: "private" | "group" = "private"): Update {
+function textUpdate(
+    userId: number,
+    chatId: number,
+    text: string,
+    chatType: "private" | "group" = "private",
+): Update {
     return {
         update_id: updateSeq,
         message: { ...baseMessage(userId, chatId, chatType), text },
     };
 }
 
-function commandUpdate(userId: number, chatId: number, command: string, chatType: "private" | "group"): Update {
+function commandUpdate(
+    userId: number,
+    chatId: number,
+    command: string,
+    chatType: "private" | "group",
+): Update {
     const message = { ...baseMessage(userId, chatId, chatType), text: command };
     return {
         update_id: updateSeq,
@@ -91,13 +106,20 @@ function voiceUpdate(userId: number, chatId: number, duration: number, fileSize?
         update_id: updateSeq,
         message: {
             ...message,
-            voice: { file_id: "voice-file", file_unique_id: "voice-unique", duration, file_size: fileSize },
+            voice: {
+                file_id: "voice-file",
+                file_unique_id: "voice-unique",
+                duration,
+                file_size: fileSize,
+            },
         },
     };
 }
 
 async function createUser(id: number) {
-    await prisma.user.create({ data: { id: BigInt(id), timezone: "Europe/Moscow", firstName: `U${id}` } });
+    await prisma.user.create({
+        data: { id: BigInt(id), timezone: "Europe/Moscow", firstName: `U${id}` },
+    });
 }
 
 describe("reminder bot access control", { concurrency: 1 }, () => {
@@ -105,8 +127,21 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         fs.rmSync(dbFile, { force: true });
         const root = path.resolve(__dirname, "..");
         const sqlite = new Database(dbFile);
-        sqlite.exec(fs.readFileSync(path.join(root, "prisma/migrations/20260117132119_init/migration.sql"), "utf8"));
-        sqlite.exec(fs.readFileSync(path.join(root, "prisma/migrations/20261117120000_add_reminder_chat_id/migration.sql"), "utf8"));
+        sqlite.exec(
+            fs.readFileSync(
+                path.join(root, "prisma/migrations/20260117132119_init/migration.sql"),
+                "utf8",
+            ),
+        );
+        sqlite.exec(
+            fs.readFileSync(
+                path.join(
+                    root,
+                    "prisma/migrations/20261117120000_add_reminder_chat_id/migration.sql",
+                ),
+                "utf8",
+            ),
+        );
         sqlite.close();
 
         const prismaMod = await import("../src/core/prisma");
@@ -137,12 +172,21 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
             const payload = typeof init?.body === "string" ? JSON.parse(init.body) : {};
             calls.push({ method, payload });
             if (method === "sendMessage" && sendFailure) {
-                return fakeTelegramResponse({ ok: false, error_code: sendFailure.error_code, description: sendFailure.description });
+                return fakeTelegramResponse({
+                    ok: false,
+                    error_code: sendFailure.error_code,
+                    description: sendFailure.description,
+                });
             }
             if (method === "sendMessage" || method === "editMessageText") {
                 return fakeTelegramResponse({
                     ok: true,
-                    result: { message_id: 1, date: 0, chat: { id: Number(payload.chat_id ?? 1), type: "private" }, text: payload.text },
+                    result: {
+                        message_id: 1,
+                        date: 0,
+                        chat: { id: Number(payload.chat_id ?? 1), type: "private" },
+                        text: payload.text,
+                    },
                 });
             }
             return fakeTelegramResponse({ ok: true, result: true });
@@ -152,7 +196,11 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
             const body = (payload ?? {}) as Record<string, any>;
             calls.push({ method, payload: body });
             if (method === "sendMessage" && sendFailure) {
-                return { ok: false, error_code: sendFailure.error_code, description: sendFailure.description };
+                return {
+                    ok: false,
+                    error_code: sendFailure.error_code,
+                    description: sendFailure.description,
+                };
             }
             if (method === "sendMessage" || method === "editMessageText") {
                 return {
@@ -165,7 +213,13 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
                     },
                 };
             }
-            return { ok: true, result: method === "getFile" ? { file_id: "voice-file", file_path: "voice/file.oga" } : true };
+            return {
+                ok: true,
+                result:
+                    method === "getFile"
+                        ? { file_id: "voice-file", file_path: "voice/file.oga" }
+                        : true,
+            };
         });
     });
 
@@ -189,13 +243,19 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         resetApi();
         await bot.handleUpdate(callbackUpdate(502, 502, `delete_${reminder.id}`));
         assert.equal(await prisma.reminder.count({ where: { id: reminder.id } }), 1);
-        assert.equal(texts("editMessageText").some((text) => text.includes("secret-from-a")), false);
+        assert.equal(
+            texts("editMessageText").some((text) => text.includes("secret-from-a")),
+            false,
+        );
 
         resetApi();
         await bot.handleUpdate(callbackUpdate(503, 503, `snooze_${reminder.id}_15`));
         const afterSnooze = await prisma.reminder.findUniqueOrThrow({ where: { id: reminder.id } });
         assert.equal(afterSnooze.triggerAt.getTime(), reminder.triggerAt.getTime());
-        assert.equal(texts("editMessageText").some((text) => text.includes("secret-from-a")), false);
+        assert.equal(
+            texts("editMessageText").some((text) => text.includes("secret-from-a")),
+            false,
+        );
 
         resetApi();
         await bot.handleUpdate(callbackUpdate(504, 504, `done_${reminder.id}`));
@@ -261,16 +321,27 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         const replies = texts("sendMessage");
         assert.equal(replies.length, UPDATE_RATE_LIMIT + 1);
         assert.equal(replies.at(-1), RATE_LIMIT_MESSAGE);
-        assert.equal(replies.slice(0, UPDATE_RATE_LIMIT).every((text) => text.includes("не смог распознать")), true);
+        assert.equal(
+            replies
+                .slice(0, UPDATE_RATE_LIMIT)
+                .every((text) => text.includes("не смог распознать")),
+            true,
+        );
 
         resetApi();
         await bot.handleUpdate(voiceUpdate(721, 721, 120, 1000));
-        assert.equal(calls.some((call) => call.method === "getFile"), false);
+        assert.equal(
+            calls.some((call) => call.method === "getFile"),
+            false,
+        );
         assert.match(texts("sendMessage").join("\n"), /60/);
 
         resetApi();
         await bot.handleUpdate(voiceUpdate(722, 722, 15, 11 * 1024 * 1024));
-        assert.equal(calls.some((call) => call.method === "getFile"), false);
+        assert.equal(
+            calls.some((call) => call.method === "getFile"),
+            false,
+        );
         assert.match(texts("sendMessage").join("\n"), /большой/);
     });
 
@@ -288,7 +359,10 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
 
         resetApi();
         await bot.handleUpdate(textUpdate(730, 730, "через 20 минут вода"));
-        assert.equal(await prisma.reminder.count({ where: { userId: 730n } }), MAX_ACTIVE_REMINDERS_PER_USER);
+        assert.equal(
+            await prisma.reminder.count({ where: { userId: 730n } }),
+            MAX_ACTIVE_REMINDERS_PER_USER,
+        );
         assert.match(texts("sendMessage").join("\n"), /лимит/);
     });
 
@@ -308,7 +382,10 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         await processDueReminders(bot);
         await processDueReminders(bot);
         assert.equal(calls.filter((call) => call.method === "sendMessage").length, 1);
-        assert.equal((await prisma.reminder.findUniqueOrThrow({ where: { id: blocked.id } })).completed, true);
+        assert.equal(
+            (await prisma.reminder.findUniqueOrThrow({ where: { id: blocked.id } })).completed,
+            true,
+        );
 
         const missing = await prisma.reminder.create({
             data: {
@@ -323,7 +400,10 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         await processDueReminders(bot);
         await processDueReminders(bot);
         assert.equal(calls.filter((call) => call.method === "sendMessage").length, 1);
-        assert.equal((await prisma.reminder.findUniqueOrThrow({ where: { id: missing.id } })).completed, true);
+        assert.equal(
+            (await prisma.reminder.findUniqueOrThrow({ where: { id: missing.id } })).completed,
+            true,
+        );
 
         const limited = await prisma.reminder.create({
             data: {
@@ -342,7 +422,10 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         assert.equal(delayed.completed, false);
         assert.ok(delayed.triggerAt.getTime() >= Date.now() + schedulerRetryDelayMs - 5_000);
 
-        await prisma.reminder.updateMany({ where: { completed: false, triggerAt: { lte: new Date() } }, data: { completed: true } });
+        await prisma.reminder.updateMany({
+            where: { completed: false, triggerAt: { lte: new Date() } },
+            data: { completed: true },
+        });
         await createUser(750);
         const oldest = Date.now() - 120_000;
         await prisma.reminder.createMany({
@@ -356,13 +439,19 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         resetApi();
         sendFailure = { error_code: 429, description: "Too Many Requests: retry after 1" };
         await processDueReminders(bot);
-        assert.equal(calls.filter((call) => call.method === "sendMessage").length, schedulerBatchSize);
+        assert.equal(
+            calls.filter((call) => call.method === "sendMessage").length,
+            schedulerBatchSize,
+        );
         resetApi();
         await processDueReminders(bot);
         const secondTick = texts("sendMessage");
         assert.deepEqual(secondTick, [`⏰ Напоминание!\n\nqueued-${schedulerBatchSize}`]);
 
-        await prisma.reminder.updateMany({ where: { completed: false }, data: { completed: true } });
+        await prisma.reminder.updateMany({
+            where: { completed: false },
+            data: { completed: true },
+        });
         const poison = await prisma.reminder.create({
             data: {
                 userId: 740n,
@@ -379,9 +468,15 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         assert.ok(Date.now() - started < 1000);
         await processDueReminders(bot);
         assert.equal(calls.filter((call) => call.method === "sendMessage").length, 1);
-        assert.equal((await prisma.reminder.findUniqueOrThrow({ where: { id: poison.id } })).completed, true);
+        assert.equal(
+            (await prisma.reminder.findUniqueOrThrow({ where: { id: poison.id } })).completed,
+            true,
+        );
 
-        await prisma.reminder.updateMany({ where: { completed: false, id: { not: poison.id } }, data: { completed: true } });
+        await prisma.reminder.updateMany({
+            where: { completed: false, id: { not: poison.id } },
+            data: { completed: true },
+        });
         const daily = await prisma.reminder.create({
             data: {
                 userId: 740n,

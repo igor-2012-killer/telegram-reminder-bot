@@ -1,4 +1,4 @@
-import { Context, SessionFlavor } from 'grammy';
+import { Context, SessionFlavor } from "grammy";
 import { ConversationFlavor } from "@grammyjs/conversations";
 
 export interface SessionData {

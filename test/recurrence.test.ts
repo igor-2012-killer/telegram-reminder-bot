@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { nextOccurrence, parseRecurrenceInterval, recurrenceRuleIsSafe } from "../src/services/recurrence";
+import {
+    nextOccurrence,
+    parseRecurrenceInterval,
+    recurrenceRuleIsSafe,
+} from "../src/services/recurrence";
 
 test("rejects zero and out-of-range intervals", () => {
     assert.equal(parseRecurrenceInterval("0"), null);
@@ -25,7 +29,10 @@ test("treats INTERVAL=0 as unsafe and returns immediately", () => {
 
 test("rejects an absurd stored interval without iterating it", () => {
     assert.equal(recurrenceRuleIsSafe("RRULE:FREQ=WEEKLY;INTERVAL=1000"), false);
-    assert.equal(nextOccurrence("RRULE:FREQ=WEEKLY;INTERVAL=5000", new Date(), new Date(), "UTC"), null);
+    assert.equal(
+        nextOccurrence("RRULE:FREQ=WEEKLY;INTERVAL=5000", new Date(), new Date(), "UTC"),
+        null,
+    );
 });
 
 test("advances a safe RRULE and the built-in daily rule", () => {
@@ -41,5 +48,8 @@ test("advances a safe RRULE and the built-in daily rule", () => {
 
 test("stops an unknown rule instead of repeating the same instant", () => {
     const now = new Date("2026-06-15T12:00:00Z");
-    assert.equal(nextOccurrence("every 0 seconds", new Date("2026-06-14T12:00:00Z"), now, "UTC"), null);
+    assert.equal(
+        nextOccurrence("every 0 seconds", new Date("2026-06-14T12:00:00Z"), now, "UTC"),
+        null,
+    );
 });
