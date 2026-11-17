@@ -20,6 +20,8 @@ type ApiCall = { method: string; payload: Record<string, any> };
 let bot: Bot<any>;
 let prisma: PrismaClient;
 let processDueReminders: (bot: Bot<any>, now?: Date) => Promise<void>;
+let schedulerBatchSize = 50;
+let schedulerRetryDelayMs = 60_000;
 const calls: ApiCall[] = [];
 let sendFailure: { error_code: number; description: string } | null = null;
 let updateSeq = 1;
@@ -113,6 +115,8 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         prisma = prismaMod.prisma;
         bot = botMod.bot;
         processDueReminders = schedulerMod.processDueReminders;
+        schedulerBatchSize = schedulerMod.SCHEDULER_BATCH_SIZE;
+        schedulerRetryDelayMs = schedulerMod.SCHEDULER_RETRY_DELAY_MS;
         bot.botInfo = {
             id: 1,
             is_bot: true,
@@ -333,8 +337,30 @@ describe("reminder bot access control", { concurrency: 1 }, () => {
         sendFailure = { error_code: 429, description: "Too Many Requests: retry after 1" };
         await processDueReminders(bot);
         await processDueReminders(bot);
-        assert.equal(calls.filter((call) => call.method === "sendMessage").length, 2);
-        assert.equal((await prisma.reminder.findUniqueOrThrow({ where: { id: limited.id } })).completed, false);
+        assert.equal(calls.filter((call) => call.method === "sendMessage").length, 1);
+        const delayed = await prisma.reminder.findUniqueOrThrow({ where: { id: limited.id } });
+        assert.equal(delayed.completed, false);
+        assert.ok(delayed.triggerAt.getTime() >= Date.now() + schedulerRetryDelayMs - 5_000);
+
+        await prisma.reminder.updateMany({ where: { completed: false, triggerAt: { lte: new Date() } }, data: { completed: true } });
+        await createUser(750);
+        const oldest = Date.now() - 120_000;
+        await prisma.reminder.createMany({
+            data: Array.from({ length: schedulerBatchSize + 1 }, (_, index) => ({
+                userId: 750n,
+                chatId: 750n,
+                message: `queued-${index}`,
+                triggerAt: new Date(oldest + index),
+            })),
+        });
+        resetApi();
+        sendFailure = { error_code: 429, description: "Too Many Requests: retry after 1" };
+        await processDueReminders(bot);
+        assert.equal(calls.filter((call) => call.method === "sendMessage").length, schedulerBatchSize);
+        resetApi();
+        await processDueReminders(bot);
+        const secondTick = texts("sendMessage");
+        assert.deepEqual(secondTick, [`⏰ Напоминание!\n\nqueued-${schedulerBatchSize}`]);
 
         await prisma.reminder.updateMany({ where: { completed: false }, data: { completed: true } });
         const poison = await prisma.reminder.create({

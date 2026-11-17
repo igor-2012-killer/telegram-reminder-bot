@@ -1,7 +1,22 @@
+-- The init migration predated Reminder.chatId. This rebuild is only valid when
+-- that column is still absent. If it already exists, abort before any write:
+-- copying userId over chatId would move group reminders into private chats.
+-- Databases that already have the column should mark this migration applied
+-- (`npm run migrate` does that) instead of executing the rebuild.
+CREATE TEMP TABLE IF NOT EXISTS "_chatid_mig_guard" ("x" INTEGER);
+CREATE TEMP TRIGGER IF NOT EXISTS "_chatid_mig_abort"
+BEFORE INSERT ON "_chatid_mig_guard"
+WHEN EXISTS (
+    SELECT 1 FROM pragma_table_info('Reminder') WHERE "name" = 'chatId'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'Reminder.chatId already exists; refusing to overwrite chat destinations');
+END;
+INSERT INTO "_chatid_mig_guard" ("x") VALUES (1);
+
 -- RedefineTables
--- The init migration predated Reminder.chatId. Rebuild the table so existing
--- databases match schema.prisma. Private chats use the user's id as the chat
--- id, which is the only destination we can recover for rows that never stored one.
+-- Rows created before the column existed have no stored destination. Private
+-- chats use the user's id, which is the only value those rows can recover.
 PRAGMA defer_foreign_keys=ON;
 PRAGMA foreign_keys=OFF;
 CREATE TABLE "new_Reminder" (

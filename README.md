@@ -48,7 +48,7 @@
 4.  **Развертывание базы данных**
     При первом запуске выполните миграцию:
     ```bash
-    docker compose exec bot npx prisma migrate deploy
+    docker compose exec bot npm run migrate
     ```
 
 ## Разработка

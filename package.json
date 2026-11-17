@@ -7,7 +7,7 @@
         "build": "tsc",
         "start": "node dist/index.js",
         "dev": "nodemon src/index.ts",
-        "migrate": "prisma migrate deploy",
+        "migrate": "node --require ts-node/register scripts/migrate.ts",
         "test": "node --require ts-node/register --test test/*.test.ts"
     },
     "repository": {

@@ -48,7 +48,7 @@ An advanced, open-source Telegram bot for setting reminders using natural langua
 4.  **Initialize Database**
     Run migrations on first start:
     ```bash
-    docker compose exec bot npx prisma migrate deploy
+    docker compose exec bot npm run migrate
     ```
 
 ## Development

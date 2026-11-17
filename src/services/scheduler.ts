@@ -7,7 +7,9 @@ import { isPermanentDeliveryError } from "./deliveryError";
 import { nextOccurrence } from "./recurrence";
 
 const TICK_MS = 10_000;
-const BATCH_SIZE = 50;
+export const SCHEDULER_BATCH_SIZE = 50;
+/** Keep a transient failure out of the next due batch so other chats can send. */
+export const SCHEDULER_RETRY_DELAY_MS = 60_000;
 
 let ticking = false;
 
@@ -28,7 +30,7 @@ export async function processDueReminders(bot: Bot<MyContext>, now = new Date())
         },
         include: { creator: true },
         orderBy: { triggerAt: "asc" },
-        take: BATCH_SIZE
+        take: SCHEDULER_BATCH_SIZE
     });
 
     for (const reminder of pendingReminders) {
@@ -72,6 +74,14 @@ export async function processDueReminders(bot: Bot<MyContext>, now = new Date())
                 }
                 logger.warn({ reminderId: reminder.id, error: errorForLog(e) }, "Stopped retrying undeliverable reminder");
             } else {
+                try {
+                    await prisma.reminder.update({
+                        where: { id: reminder.id },
+                        data: { triggerAt: new Date(now.getTime() + SCHEDULER_RETRY_DELAY_MS) }
+                    });
+                } catch (updateError) {
+                    logger.error({ reminderId: reminder.id, error: errorForLog(updateError) }, "Failed to delay reminder retry");
+                }
                 logger.error({ reminderId: reminder.id, error: errorForLog(e) }, "Failed to send reminder");
             }
         }
