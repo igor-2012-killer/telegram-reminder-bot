@@ -7,6 +7,7 @@ import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import ffmpeg from "fluent-ffmpeg";
 import logger from "../core/logger";
+import { errorForLog } from "../core/redact";
 
 const getSTTClient = () => {
     if (!config.GROQ_API_KEY) return null;
@@ -54,7 +55,7 @@ export class STTService {
                     .toFormat("mp3")
                     .on("end", resolve)
                     .on("error", (err) => {
-                        logger.error(err, "FFmpeg conversion error");
+                        logger.error({ error: errorForLog(err) }, "FFmpeg conversion error");
                         reject(err);
                     })
                     .save(outputPath);
@@ -71,7 +72,7 @@ export class STTService {
 
             return transcription.text;
         } catch (error) {
-            logger.error(error, "STT error");
+            logger.error({ error: errorForLog(error) }, "STT error");
             throw error;
         } finally {
             // Cleanup

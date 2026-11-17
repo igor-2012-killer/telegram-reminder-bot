@@ -1,5 +1,15 @@
 import * as chrono from 'chrono-node';
 import { DateTime } from 'luxon';
+import { parseRecurrenceInterval } from './recurrence';
+
+export class InvalidRecurrenceIntervalError extends Error {
+    constructor() {
+        super("Recurrence interval must be between 1 and 999");
+        this.name = "InvalidRecurrenceIntervalError";
+    }
+}
+
+const EXPLICIT_INTERVAL = /(?:каждые|every)\s+(\d+)\s+(?:дня|день|дней|days|day|недель|недели|неделю|weeks|week)/i;
 
 interface ParseResult {
     date: Date;
@@ -87,6 +97,13 @@ export class DateParser {
             }
         }
 
+        // Reject before a rule is stored. Chrono often swallows the number in
+        // Russian phrases ("каждые 0 дней в 10:00"), so check the original text.
+        const explicitInterval = EXPLICIT_INTERVAL.exec(text);
+        if (explicitInterval && parseRecurrenceInterval(explicitInterval[1]) === null) {
+            throw new InvalidRecurrenceIntervalError();
+        }
+
         // Clean text: remove the date part and recurring keywords
         let cleanText = text;
 
@@ -108,11 +125,19 @@ export class DateParser {
             { pattern: /еженедельно/i, rule: 'weekly' },
             {
                 pattern: /(?:каждые|every)\s+(\d+)\s+(?:дня|дней|days)/i,
-                ruleGenerator: (match: RegExpExecArray) => `RRULE:FREQ=DAILY;INTERVAL=${match[1]}`
+                ruleGenerator: (match: RegExpExecArray) => {
+                    const interval = parseRecurrenceInterval(match[1]);
+                    if (interval === null) return null;
+                    return `RRULE:FREQ=DAILY;INTERVAL=${interval}`;
+                }
             },
             {
                 pattern: /(?:каждые|every)\s+(\d+)\s+(?:недель|недели|weeks)/i,
-                ruleGenerator: (match: RegExpExecArray) => `RRULE:FREQ=WEEKLY;INTERVAL=${match[1]}`
+                ruleGenerator: (match: RegExpExecArray) => {
+                    const interval = parseRecurrenceInterval(match[1]);
+                    if (interval === null) return null;
+                    return `RRULE:FREQ=WEEKLY;INTERVAL=${interval}`;
+                }
             },
             {
                 pattern: /(?:каждый|every)\s+(понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i,
@@ -138,7 +163,9 @@ export class DateParser {
             if (match) {
                 isRecurring = true;
                 if ('ruleGenerator' in p && typeof p.ruleGenerator === 'function') {
-                    recurrenceRule = p.ruleGenerator(match);
+                    const generated = p.ruleGenerator(match);
+                    if (generated == null) throw new InvalidRecurrenceIntervalError();
+                    recurrenceRule = generated;
                 } else if ('rule' in p && typeof p.rule === 'string') {
                     recurrenceRule = p.rule;
                 }

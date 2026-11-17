@@ -1,15 +1,12 @@
-import { bot } from './bot';
+import { bot, registerBotCommands } from './bot';
 import { prisma } from './core/prisma';
+import { errorForLog } from './core/redact';
 import { runScheduler } from './services/scheduler';
 import logger from './core/logger';
-import { limit } from "@grammyjs/ratelimiter";
 
 async function main() {
-    // Start Scheduler
     runScheduler(bot);
-
-    // Rate limiting
-    bot.use(limit());
+    await registerBotCommands();
 
     logger.info("Starting bot...");
     await bot.start({
@@ -20,7 +17,7 @@ async function main() {
 }
 
 main().catch((e) => {
-    logger.error(e, "Error starting bot");
+    logger.error({ error: errorForLog(e) }, "Error starting bot");
     process.exit(1);
 }).finally(async () => {
     await prisma.$disconnect();

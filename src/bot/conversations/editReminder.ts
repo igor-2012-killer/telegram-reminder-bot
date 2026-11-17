@@ -3,17 +3,26 @@ import { type Conversation } from "@grammyjs/conversations";
 import { MyContext, SessionData } from "../types";
 import { DateTime } from 'luxon';
 import { prisma } from "../../core/prisma";
-import { DateParser } from "../../services/dateParser";
+import { DateParser, InvalidRecurrenceIntervalError } from "../../services/dateParser";
+import { findReminderInChat, updateReminderInChat } from "../../services/reminderAccess";
 import logger from "../../core/logger";
 
 export async function editReminder(conversation: Conversation<MyContext, Context & SessionFlavor<SessionData>>, ctx: Context & SessionFlavor<SessionData>) {
     const reminderIdStr = ctx.callbackQuery?.data?.replace("edit_", "");
     if (!reminderIdStr) return;
 
-    const reminderId = parseInt(reminderIdStr);
-    const reminder = await prisma.reminder.findUnique({ where: { id: reminderId } });
+    const reminderId = parseInt(reminderIdStr, 10);
+    const chatId = ctx.chat?.id;
+    if (!Number.isInteger(reminderId) || chatId == null) {
+        await ctx.reply("⚠️ Напоминание не найдено.");
+        return;
+    }
+
+    const chatKey = BigInt(chatId);
+    const reminder = await findReminderInChat(reminderId, chatKey);
 
     if (!reminder) {
+        await ctx.answerCallbackQuery("Напоминание не найдено");
         await ctx.reply("⚠️ Напоминание не найдено.");
         return;
     }
@@ -43,20 +52,21 @@ export async function editReminder(conversation: Conversation<MyContext, Context
     const action = result.callbackQuery?.data;
     if (!action) return;
 
-    if (action.startsWith("edit_text_")) {
+    if (action === `edit_text_${reminderId}`) {
         await ctx.answerCallbackQuery();
         await ctx.editMessageText("Введите новый текст для напоминания:");
         const textUpdate = await conversation.waitFor("message:text");
 
-        await prisma.reminder.update({
-            where: { id: reminderId },
-            data: { message: textUpdate.message.text }
-        });
+        const updated = await updateReminderInChat(reminderId, chatKey, { message: textUpdate.message.text });
+        if (updated.count === 0) {
+            await textUpdate.reply("⚠️ Напоминание не найдено.");
+            return;
+        }
 
         logger.info({ reminderId }, "Reminder text updated");
         await textUpdate.reply("✅ Текст обновлен!");
     }
-    else if (action.startsWith("edit_time_")) {
+    else if (action === `edit_time_${reminderId}`) {
         await ctx.answerCallbackQuery();
         await ctx.editMessageText("Введите новое время (например, 'завтра в 10 утра' или 'через 2 часа'):");
 
@@ -65,17 +75,27 @@ export async function editReminder(conversation: Conversation<MyContext, Context
 
         if (!user?.timezone) return;
 
-        const parseResult = DateParser.parse(timeUpdate.message.text, user.timezone, new Date());
+        let parseResult;
+        try {
+            parseResult = DateParser.parse(timeUpdate.message.text, user.timezone, new Date());
+        } catch (e) {
+            if (e instanceof InvalidRecurrenceIntervalError) {
+                await timeUpdate.reply("Интервал повтора должен быть от 1 до 999. Редактирование отменено.");
+                return;
+            }
+            throw e;
+        }
 
         if (parseResult) {
-            await prisma.reminder.update({
-                where: { id: reminderId },
-                data: {
-                    triggerAt: parseResult.date,
-                    isRecurring: parseResult.isRecurring,
-                    recurrenceRule: parseResult.recurrenceRule
-                }
+            const updated = await updateReminderInChat(reminderId, chatKey, {
+                triggerAt: parseResult.date,
+                isRecurring: parseResult.isRecurring,
+                recurrenceRule: parseResult.recurrenceRule
             });
+            if (updated.count === 0) {
+                await timeUpdate.reply("⚠️ Напоминание не найдено.");
+                return;
+            }
 
             logger.info({ reminderId, newTime: parseResult.date }, "Reminder time updated");
             const formatted = DateTime.fromJSDate(parseResult.date).setZone(user.timezone).toFormat('dd.MM.yyyy HH:mm');
