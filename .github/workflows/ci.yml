@@ -21,6 +21,11 @@ jobs:
                   node-version: 22.x
                   cache: "npm"
             - run: npm ci
+              env:
+                  npm_config_engine_strict: "true"
             - run: npx prisma generate
+            - run: npm run lint
+            - run: npm run format:check
+            - run: npm run typecheck
             - run: npm test
             - run: npm run build

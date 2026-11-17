@@ -10,3 +10,5 @@ yarn-error.log*
 .idea
 .vscode
 *.lock
+# npm ci needs this lockfile. Keep the exception after any broader lock ignore.
+!package-lock.json

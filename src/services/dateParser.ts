@@ -78,8 +78,8 @@ export class DateParser {
             const month = components.get("month") ?? userNow.month;
             const day = components.get("day") ?? userNow.day;
             let hour = components.get("hour");
-            let minute = components.get("minute") ?? 0;
-            let second = components.get("second") ?? 0;
+            const minute = components.get("minute") ?? 0;
+            const second = components.get("second") ?? 0;
 
             if (hour === null) {
                 hour = 12; // Default
@@ -112,13 +112,10 @@ export class DateParser {
             throw new InvalidRecurrenceIntervalError();
         }
 
-        // Clean text: remove the date part and recurring keywords
-        let cleanText = text;
-
-        // 1. Remove the exact text matched by chrono
+        // Clean text: remove the date part and recurring keywords.
         const index = result.index;
         const dateText = result.text;
-        cleanText = text.slice(0, index) + text.slice(index + dateText.length);
+        let cleanText = text.slice(0, index) + text.slice(index + dateText.length);
 
         // 2. Detect and remove recurring keywords independently if needed
         let isRecurring = false;

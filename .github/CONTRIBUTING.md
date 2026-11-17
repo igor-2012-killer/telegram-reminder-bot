@@ -19,9 +19,8 @@ First off, thanks for taking the time to contribute! 🎉
 
 1.  Fork the repo and create your branch from `master`.
 2.  If you've added code that should be tested, add tests.
-3.  Ensure the test suite passes.
-4.  Make sure your code lints.
-5.  Issue that pull request!
+3.  `npm test`, `npm run lint`, `npm run format:check`, and `npm run typecheck` must pass. `AGENTS.md` lists what each check locks.
+4.  Issue that pull request!
 
 ## Project Setup
 
@@ -31,8 +30,6 @@ First off, thanks for taking the time to contribute! 🎉
 
 ## Code Style
 
-- Use TypeScript.
-- Follow Prettier/ESLint rules.
-- Use Pino for logging.
+Run `npm run lint` and `npm run format:check` instead of restating style rules here. `npm run typecheck` covers `src/`, `test/`, and `scripts/`.
 
 Thank you! 👋
