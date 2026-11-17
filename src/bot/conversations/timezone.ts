@@ -1,26 +1,26 @@
 import { Context, SessionFlavor, InlineKeyboard } from "grammy";
 import { type Conversation } from "@grammyjs/conversations";
 import { MyContext, SessionData } from "../types";
-import { DateTime } from 'luxon';
+import { DateTime } from "luxon";
 import { prisma } from "../../core/prisma";
 
 const CITY_ALIASES: Record<string, string> = {
-    'moscow': 'Europe/Moscow',
-    'msk': 'Europe/Moscow',
-    'spb': 'Europe/Moscow',
-    'piter': 'Europe/Moscow',
-    'saint-petersburg': 'Europe/Moscow',
-    'london': 'Europe/London',
-    'kyiv': 'Europe/Kyiv',
-    'kiev': 'Europe/Kyiv',
-    'minsk': 'Europe/Minsk',
-    'paris': 'Europe/Paris',
-    'berlin': 'Europe/Berlin',
-    'rome': 'Europe/Rome',
-    'new york': 'America/New_York',
-    'ny': 'America/New_York',
-    'nyc': 'America/New_York',
-    'tokyo': 'Asia/Tokyo',
+    moscow: "Europe/Moscow",
+    msk: "Europe/Moscow",
+    spb: "Europe/Moscow",
+    piter: "Europe/Moscow",
+    "saint-petersburg": "Europe/Moscow",
+    london: "Europe/London",
+    kyiv: "Europe/Kyiv",
+    kiev: "Europe/Kyiv",
+    minsk: "Europe/Minsk",
+    paris: "Europe/Paris",
+    berlin: "Europe/Berlin",
+    rome: "Europe/Rome",
+    "new york": "America/New_York",
+    ny: "America/New_York",
+    nyc: "America/New_York",
+    tokyo: "Asia/Tokyo",
 };
 
 function normalizeTimezone(input: string): string {
@@ -39,7 +39,10 @@ function normalizeTimezone(input: string): string {
     return input;
 }
 
-export async function askTimezone(conversation: Conversation<MyContext, Context & SessionFlavor<SessionData>>, ctx: Context & SessionFlavor<SessionData>) {
+export async function askTimezone(
+    conversation: Conversation<MyContext, Context & SessionFlavor<SessionData>>,
+    ctx: Context & SessionFlavor<SessionData>,
+) {
     const keyboard = new InlineKeyboard()
         .text("Москва (MSK)", "tz_Europe/Moscow")
         .text("Лондон (GMT)", "tz_Europe/London")
@@ -51,8 +54,8 @@ export async function askTimezone(conversation: Conversation<MyContext, Context 
 
     await ctx.reply(
         "Привет! Перед началом работы, пожалуйста, укажи свой часовой пояс. \n\n" +
-        "Выбери город из списка ниже или **напиши название своего города** в чат (например, 'Almaty' или 'Europe/Moscow').",
-        { reply_markup: keyboard, parse_mode: "Markdown" }
+            "Выбери город из списка ниже или **напиши название своего города** в чат (например, 'Almaty' или 'Europe/Moscow').",
+        { reply_markup: keyboard, parse_mode: "Markdown" },
     );
 
     // Loop until valid
@@ -72,7 +75,7 @@ export async function askTimezone(conversation: Conversation<MyContext, Context 
             }
         } else if (result.message?.text) {
             const rawInput = result.message.text;
-            if (rawInput === '/cancel') {
+            if (rawInput === "/cancel") {
                 await ctx.reply("Действие отменено.");
                 return;
             }
@@ -92,24 +95,28 @@ export async function askTimezone(conversation: Conversation<MyContext, Context 
                             id: BigInt(userId),
                             timezone: timezone,
                             username: ctx.from?.username,
-                            firstName: ctx.from?.first_name
-                        }
+                            firstName: ctx.from?.first_name,
+                        },
                     });
-                    await ctx.reply(`Отлично! Твой часовой пояс установлен как: **${timezone}**`, { parse_mode: "Markdown" });
+                    await ctx.reply(`Отлично! Твой часовой пояс установлен как: **${timezone}**`, {
+                        parse_mode: "Markdown",
+                    });
                     await ctx.reply(
                         "Теперь ты можешь ставить напоминания! Просто напиши мне что-то вроде:\n\n" +
-                        "• \"через 5 минут выпить воды\"\n" +
-                        "• \"завтра в 10:00 позвонить врачу\"\n" +
-                        "• \"каждую субботу в 11:00 уборка\"\n\n" +
-                        "Также доступны команды:\n" +
-                        "/list — список твоих напоминаний\n" +
-                        "/settings — настройки\n" +
-                        "/help — справка"
+                            '• "через 5 минут выпить воды"\n' +
+                            '• "завтра в 10:00 позвонить врачу"\n' +
+                            '• "каждую субботу в 11:00 уборка"\n\n' +
+                            "Также доступны команды:\n" +
+                            "/list — список твоих напоминаний\n" +
+                            "/settings — настройки\n" +
+                            "/help — справка",
                     );
                     return;
                 }
             } else {
-                await ctx.reply("Извини, я не понял этот часовой пояс. Попробуй 'Europe/Moscow' или введи другой город на английском.");
+                await ctx.reply(
+                    "Извини, я не понял этот часовой пояс. Попробуй 'Europe/Moscow' или введи другой город на английском.",
+                );
             }
         }
     }

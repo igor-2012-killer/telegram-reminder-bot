@@ -3,11 +3,18 @@
     "version": "1.0.0",
     "description": "Telegram bot for smart reminders with natural language support",
     "main": "dist/index.js",
+    "engines": {
+        "node": ">=22 <23"
+    },
     "scripts": {
         "build": "tsc",
         "start": "node dist/index.js",
         "dev": "nodemon src/index.ts",
         "migrate": "node --require ts-node/register scripts/migrate.ts",
+        "lint": "eslint src test scripts",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json --noEmit",
         "test": "node --require ts-node/register --test test/*.test.ts"
     },
     "repository": {
@@ -48,13 +55,18 @@
         "uuid": "^13.0.0"
     },
     "devDependencies": {
+        "@eslint/js": "^10.0.1",
         "@types/better-sqlite3": "^7.6.13",
         "@types/luxon": "^3.7.1",
         "@types/node": "^25.0.9",
+        "eslint": "^10.15.0",
+        "globals": "^17.14.0",
         "nodemon": "^3.1.11",
         "pino-pretty": "^10.3.1",
+        "prettier": "^3.10.1",
         "prisma": "^7.2.0",
         "ts-node": "^10.9.2",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.73.0"
     }
 }

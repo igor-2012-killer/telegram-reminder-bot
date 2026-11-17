@@ -36,7 +36,9 @@ function databaseFile(): string | null {
 }
 
 function tableExists(db: Database.Database, table: string): boolean {
-    return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table));
+    return Boolean(
+        db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table),
+    );
 }
 
 function columnExists(db: Database.Database, table: string, column: string): boolean {
@@ -46,17 +48,21 @@ function columnExists(db: Database.Database, table: string, column: string): boo
 
 function appliedMigrations(db: Database.Database): string[] {
     if (!tableExists(db, "_prisma_migrations")) return [];
-    const rows = db.prepare(
-        "SELECT migration_name AS name FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL",
-    ).all() as Array<{ name: string }>;
+    const rows = db
+        .prepare(
+            "SELECT migration_name AS name FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL",
+        )
+        .all() as Array<{ name: string }>;
     return rows.map((row) => row.name);
 }
 
 function failedMigrations(db: Database.Database): string[] {
     if (!tableExists(db, "_prisma_migrations")) return [];
-    const rows = db.prepare(
-        "SELECT migration_name AS name FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL",
-    ).all() as Array<{ name: string }>;
+    const rows = db
+        .prepare(
+            "SELECT migration_name AS name FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL",
+        )
+        .all() as Array<{ name: string }>;
     return rows.map((row) => row.name);
 }
 
@@ -89,7 +95,11 @@ function main() {
             }
         }
 
-        for (const name of planBaseline({ reminderTableExists, chatIdColumnExists, appliedMigrations: applied })) {
+        for (const name of planBaseline({
+            reminderTableExists,
+            chatIdColumnExists,
+            appliedMigrations: applied,
+        })) {
             prisma(["migrate", "resolve", "--applied", name]);
         }
     }

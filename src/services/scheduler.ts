@@ -16,7 +16,7 @@ let ticking = false;
 async function markCompleted(id: number) {
     await prisma.reminder.update({
         where: { id },
-        data: { completed: true }
+        data: { completed: true },
     });
 }
 
@@ -25,12 +25,12 @@ export async function processDueReminders(bot: Bot<MyContext>, now = new Date())
         where: {
             completed: false,
             triggerAt: {
-                lte: now
-            }
+                lte: now,
+            },
         },
         include: { creator: true },
         orderBy: { triggerAt: "asc" },
-        take: SCHEDULER_BATCH_SIZE
+        take: SCHEDULER_BATCH_SIZE,
     });
 
     for (const reminder of pendingReminders) {
@@ -44,7 +44,7 @@ export async function processDueReminders(bot: Bot<MyContext>, now = new Date())
             await bot.api.sendMessage(
                 Number(reminder.chatId),
                 `⏰ Напоминание!\n\n${reminder.message}`,
-                { reply_markup: keyboard }
+                { reply_markup: keyboard },
             );
 
             if (reminder.isRecurring && reminder.recurrenceRule && reminder.creator?.timezone) {
@@ -52,7 +52,7 @@ export async function processDueReminders(bot: Bot<MyContext>, now = new Date())
                     reminder.recurrenceRule,
                     reminder.triggerAt,
                     now,
-                    reminder.creator.timezone
+                    reminder.creator.timezone,
                 );
                 if (!next) {
                     await markCompleted(reminder.id);
@@ -60,7 +60,7 @@ export async function processDueReminders(bot: Bot<MyContext>, now = new Date())
                 }
                 await prisma.reminder.update({
                     where: { id: reminder.id },
-                    data: { triggerAt: next }
+                    data: { triggerAt: next },
                 });
             } else {
                 await markCompleted(reminder.id);
@@ -70,19 +70,31 @@ export async function processDueReminders(bot: Bot<MyContext>, now = new Date())
                 try {
                     await markCompleted(reminder.id);
                 } catch (updateError) {
-                    logger.error({ reminderId: reminder.id, error: errorForLog(updateError) }, "Failed to retire undeliverable reminder");
+                    logger.error(
+                        { reminderId: reminder.id, error: errorForLog(updateError) },
+                        "Failed to retire undeliverable reminder",
+                    );
                 }
-                logger.warn({ reminderId: reminder.id, error: errorForLog(e) }, "Stopped retrying undeliverable reminder");
+                logger.warn(
+                    { reminderId: reminder.id, error: errorForLog(e) },
+                    "Stopped retrying undeliverable reminder",
+                );
             } else {
                 try {
                     await prisma.reminder.update({
                         where: { id: reminder.id },
-                        data: { triggerAt: new Date(now.getTime() + SCHEDULER_RETRY_DELAY_MS) }
+                        data: { triggerAt: new Date(now.getTime() + SCHEDULER_RETRY_DELAY_MS) },
                     });
                 } catch (updateError) {
-                    logger.error({ reminderId: reminder.id, error: errorForLog(updateError) }, "Failed to delay reminder retry");
+                    logger.error(
+                        { reminderId: reminder.id, error: errorForLog(updateError) },
+                        "Failed to delay reminder retry",
+                    );
                 }
-                logger.error({ reminderId: reminder.id, error: errorForLog(e) }, "Failed to send reminder");
+                logger.error(
+                    { reminderId: reminder.id, error: errorForLog(e) },
+                    "Failed to send reminder",
+                );
             }
         }
     }
